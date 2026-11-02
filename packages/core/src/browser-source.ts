@@ -40,6 +40,10 @@ export async function analyzePublicRepository(
   ref?: string,
   onProgress: (message: string) => void = () => {},
   fetcher: Fetcher = fetch,
+  blobs?: {
+    get: (sha: string) => Promise<string | undefined>;
+    put: (sha: string, content: string) => Promise<void>;
+  },
 ): Promise<RepoSnapshot> {
   const repository = parseRepository(input);
   onProgress("Connecting directly to public GitHub…");
@@ -90,6 +94,12 @@ export async function analyzePublicRepository(
       while (cursor < downloadable.length) {
         const { f, i } = downloadable[cursor++];
         try {
+          const cached = await blobs?.get(f.sha);
+          if (cached !== undefined) {
+            files[i].content = cached;
+            completed++;
+            continue;
+          }
           const path = f.path.split("/").map(encodeURIComponent).join("/");
           const response = await fetcher(
             `https://raw.githubusercontent.com/${repository}/${sha}/${path}`,
@@ -102,7 +112,11 @@ export async function analyzePublicRepository(
           if (!response.ok) {
             await response.body?.cancel();
             failed++;
-          } else files[i].content = await limitedText(response);
+          } else {
+            files[i].content = await limitedText(response);
+            if (files[i].content !== undefined)
+              await blobs?.put(f.sha, files[i].content!);
+          }
         } catch {
           failed++;
         }

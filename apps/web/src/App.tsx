@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { AnalysisWorkspace } from "./Workspaces";
+import { lazy, Suspense, useEffect, useMemo, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
@@ -17,6 +18,10 @@ import {
   ListTree,
   LoaderCircle,
   Maximize2,
+  Minimize2,
+  Crosshair,
+  History,
+  PanelRight,
   Network,
   Pause,
   Play,
@@ -31,8 +36,16 @@ import {
 } from "lucide-react";
 import { rateSnapshot } from "../../../packages/core/src/health";
 import { hash } from "../../../packages/core/src/layout";
-import { useRepo, loadRepository, openDemo, json, type View } from "./state";
-import { Files, Inspector, PipelineDetail } from "./Panels";
+import {
+  useRepo,
+  loadRepository,
+  openDemo,
+  json,
+  scheduleWarmup,
+  stopWarmup,
+  type View,
+} from "./state";
+import { Files, Inspector } from "./Panels";
 import { Timeline, PipelineStrip } from "./Timeline";
 const Graph = lazy(() => import("./Graph").then((m) => ({ default: m.Graph })));
 const nav = [
@@ -42,6 +55,31 @@ const nav = [
   { name: "Pipelines", icon: Workflow },
 ] as const;
 export function App() {
+  const root = useRef<HTMLDivElement>(null);
+  async function fullscreen() {
+    const s = useRepo.getState(),
+      next = !s.expanded;
+    s.toggleExpanded(next);
+    try {
+      if (next && root.current?.requestFullscreen)
+        await root.current.requestFullscreen();
+      else if (document.fullscreenElement) await document.exitFullscreen();
+    } catch {
+      /* Immersive layout also works when native fullscreen is unavailable. */
+    }
+  }
+  useEffect(() => {
+    let native = false;
+    const change = () => {
+      if (document.fullscreenElement === root.current) native = true;
+      else if (native) {
+        native = false;
+        useRepo.getState().toggleExpanded(false);
+      }
+    };
+    document.addEventListener("fullscreenchange", change);
+    return () => document.removeEventListener("fullscreenchange", change);
+  }, []);
   const state = useRepo(),
     {
       snapshot,
@@ -88,12 +126,33 @@ export function App() {
   });
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      const plain = !e.ctrlKey && !e.metaKey && !e.altKey;
+      const editable = (e.target as HTMLElement)?.matches?.(
+        "input,textarea,select,[contenteditable=true]",
+      );
       if (e.key === "Escape") {
-        set({ focus: null, query: "" });
+        const current = useRepo.getState();
+        if (current.expanded) {
+          void fullscreen();
+        } else if (current.focus) current.set({ focus: null });
+        else if (current.view !== "Explore") current.toggleView("Explore");
+        else current.set({ inspectorOpen: false });
+        set({ query: "" });
         setRepoForm(false);
         setSettings(false);
         setHelp(false);
       }
+      if (!editable && plain && (e.key === "+" || e.key === "=")) {
+        e.preventDefault();
+        useRepo.getState().requestCamera("in");
+      }
+      if (!editable && plain && e.key === "-") {
+        e.preventDefault();
+        useRepo.getState().requestCamera("out");
+      }
+      if (!editable && plain && e.key === "0")
+        useRepo.getState().requestCamera("fit");
+      if (!editable && plain && e.key.toLowerCase() === "f") void fullscreen();
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         document.getElementById("repo-search")?.focus();
@@ -108,6 +167,24 @@ export function App() {
       media.removeEventListener("change", change);
     };
   }, [set]);
+  useEffect(() => {
+    scheduleWarmup();
+    const visibility = () => {
+      if (document.hidden) stopWarmup();
+      else scheduleWarmup();
+    };
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      stopWarmup();
+      document.removeEventListener("visibilitychange", visibility);
+    };
+  }, [
+    snapshot.repository,
+    snapshot.sha,
+    state.prefetchEnabled,
+    state.pending,
+    state.playing,
+  ]);
   function submitRepo(e: React.FormEvent) {
     e.preventDefault();
     let input = repository
@@ -135,7 +212,10 @@ export function App() {
         maximumFractionDigits: 1,
       }).format(n);
   return (
-    <div className="app-shell">
+    <div
+      ref={root}
+      className={`app-shell ${state.expanded ? "is-expanded" : ""}`}
+    >
       <header className="topbar">
         <a
           className="brand"
@@ -152,7 +232,8 @@ export function App() {
             <button
               key={name}
               className={view === name ? "active" : ""}
-              onClick={() => set({ view: name as View })}
+              aria-pressed={view === name}
+              onClick={() => state.toggleView(name as View)}
             >
               <Icon size={14} />
               <span>{name}</span>
@@ -183,13 +264,6 @@ export function App() {
         </div>
       </header>
       <div className="repository-bar">
-        <button
-          className="icon-button"
-          aria-label="Toggle files"
-          onClick={() => set({ filesOpen: !state.filesOpen })}
-        >
-          <ListTree size={17} />
-        </button>
         <button
           className="repository-button"
           aria-label="Open repository"
@@ -251,7 +325,13 @@ export function App() {
         <button
           className="health-button"
           aria-label="Repository health"
-          onClick={() => set({ inspector: "health" })}
+          onClick={() =>
+            set({
+              inspector: "health",
+              inspectorOpen: true,
+              ...(innerWidth < 1200 ? { filesOpen: false } : {}),
+            })
+          }
         >
           <ShieldCheck size={15} />
           <span>Health</span>
@@ -364,6 +444,17 @@ export function App() {
               onChange={(e) => set({ reducedMotion: e.target.checked })}
             />
           </label>
+          <label>
+            <span>
+              Prepare nearby commits
+              <small>Paced background cache · up to 6 attempts per hour</small>
+            </span>
+            <input
+              type="checkbox"
+              checked={state.prefetchEnabled}
+              onChange={(e) => set({ prefetchEnabled: e.target.checked })}
+            />
+          </label>
           <div className="section-heading">LAYER ASSIGNMENTS</div>
           <p className="small muted">
             Assign groups or path globs to layers 0–3, in order. First matching
@@ -426,10 +517,72 @@ export function App() {
           </button>
         </div>
       )}
+      <div className="layout-bar">
+        <div
+          className="panel-toggles"
+          role="group"
+          aria-label="Workspace panels"
+        >
+          <button
+            aria-label="Toggle files"
+            aria-expanded={state.filesOpen}
+            className={state.filesOpen ? "active" : ""}
+            onClick={state.toggleFiles}
+          >
+            <ListTree size={17} />
+            <span>Files</span>
+          </button>
+          <button
+            aria-label="Toggle inspector"
+            aria-expanded={state.inspectorOpen}
+            className={state.inspectorOpen ? "active" : ""}
+            onClick={state.toggleInspector}
+          >
+            <PanelRight size={17} />
+            <span>Inspector</span>
+          </button>
+          <button
+            aria-label={state.historyOpen ? "Hide history" : "Show history"}
+            aria-expanded={state.historyOpen}
+            className={state.historyOpen ? "active" : ""}
+            onClick={() => set({ historyOpen: !state.historyOpen })}
+          >
+            <History size={17} />
+            <span>History</span>
+          </button>
+          <button
+            aria-label={state.ciOpen ? "Hide CI" : "Show CI"}
+            aria-expanded={state.ciOpen}
+            className={`ci-toggle ${state.ciOpen ? "active" : ""}`}
+            onClick={() => set({ ciOpen: !state.ciOpen })}
+          >
+            <Workflow size={17} />
+            <span>CI</span>
+          </button>
+        </div>
+        <div className="workspace-mode-actions">
+          {state.view === "Explore" && (
+            <button
+              className="expand-button"
+              aria-label={state.expanded ? "Exit fullscreen" : "Expand cloud"}
+              onClick={() => void fullscreen()}
+            >
+              {state.expanded ? (
+                <Minimize2 size={17} />
+              ) : (
+                <Maximize2 size={17} />
+              )}
+              <span>{state.expanded ? "Exit fullscreen" : "Fullscreen"}</span>
+              <kbd>F</kbd>
+            </button>
+          )}
+        </div>
+      </div>
       <main className="workbench">
         <Files />
         <section
-          className={`graph-workspace ${view === "Pipelines" ? "pipeline-mode" : ""}`}
+          className="graph-workspace"
+          hidden={view !== "Explore"}
           aria-label="Spatial repository explorer"
         >
           <div className="workspace-heading">
@@ -515,76 +668,67 @@ export function App() {
               <kbd>Esc</kbd>
             </button>
           )}
-          {view === "Dependencies" && (
-            <div className="context-panel scroll-area">
-              <div className="section-heading">
-                EXTERNAL PACKAGES <span>{snapshot.dependencies.length}</span>
-              </div>
-              {snapshot.dependencies.slice(0, dependencyLimit).map((d, i) => (
-                <div className="dependency" key={d.name + i}>
-                  <Box size={13} />
-                  <span>
-                    {d.name}
-                    <small>{d.dev ? "development" : "production"}</small>
-                  </span>
-                  <code>{d.version}</code>
-                </div>
-              ))}
-              {snapshot.dependencies.length > dependencyLimit && (
-                <button
-                  className="text-link list-more"
-                  onClick={() => setDependencyLimit(dependencyLimit + 60)}
-                >
-                  Show 60 more ({snapshot.dependencies.length - dependencyLimit}{" "}
-                  remaining)
-                </button>
-              )}
-              {!snapshot.dependencies.length && (
-                <p className="muted small">
-                  No package.json dependencies found.
-                </p>
-              )}
-            </div>
-          )}
-          {view === "Functions" && (
-            <div className="context-note">
-              <Braces size={15} />
-              <span>
-                {functions.length} function definitions
-                <small>
-                  Zoom closer to reveal functions. Select a file to inspect its
-                  definitions.
-                </small>
-              </span>
-            </div>
-          )}
-          {view === "Pipelines" && <PipelineDetail />}
           <div className="graph-bottom">
-            <div className="legend">
-              <span>
-                <i className="dot cyan" />
-                {state.color === "module"
-                  ? "File / module"
-                  : state.color === "complexity"
-                    ? "Blue ≤10 · amber >10"
-                    : state.color === "language"
-                      ? "Blue TS · gold JS · mint other"
-                      : "Mint: added / changed"}
-              </span>
-              <span>
-                <i className="dot mint" />
-                Selected element
-              </span>
-              <span>
-                <i className="legend-line" />
-                Resolved connection
-              </span>
-              <small>
-                Size ∝ {state.metric === "loc" ? "lines of code" : "bytes"} ·
-                glow is decorative
-              </small>
+            <div className="graph-info">
+              <div className="detail-level" data-testid="graph-detail">
+                {state.graphLevel === "packages"
+                  ? "Packages"
+                  : state.graphLevel === "functions"
+                    ? "Functions"
+                    : "Files"}
+                <span>
+                  {" "}
+                  ·{" "}
+                  {state.graphLevel === "functions"
+                    ? "Tap a label or point"
+                    : "Zoom for more detail"}
+                </span>
+              </div>
+              <details className="legend-disclosure">
+                <summary>Legend</summary>
+                <div className="legend">
+                  <span>
+                    <i className="dot cyan" />
+                    {state.color === "module"
+                      ? "File / module"
+                      : state.color === "complexity"
+                        ? "Blue ≤10 · amber >10"
+                        : state.color === "language"
+                          ? "Blue TS · gold JS · mint other"
+                          : "Mint: added / changed"}
+                  </span>
+                  <span>
+                    <i className="dot mint" />
+                    Selected element
+                  </span>
+                  <span>
+                    <i className="legend-line" />
+                    Resolved connection
+                  </span>
+                  <small>
+                    Size ∝ {state.metric === "loc" ? "lines of code" : "bytes"}{" "}
+                    · glow is decorative
+                  </small>
+                </div>
+              </details>
             </div>
             <div className="graph-tools">
+              <button
+                className="icon-button zoom-control"
+                aria-label="Zoom out"
+                title="Zoom out (−)"
+                onClick={() => state.requestCamera("out")}
+              >
+                <ZoomOut size={19} />
+              </button>
+              <button
+                className="icon-button zoom-control"
+                aria-label="Zoom in"
+                title="Zoom in (+)"
+                onClick={() => state.requestCamera("in")}
+              >
+                <ZoomIn size={19} />
+              </button>
               <button
                 className="icon-button"
                 aria-label={
@@ -598,12 +742,10 @@ export function App() {
               <button
                 className="icon-button"
                 aria-label="Reset camera"
-                title="Reset camera"
-                onClick={() =>
-                  set({ cameraRevision: state.cameraRevision + 1 })
-                }
+                title="Fit cloud (0)"
+                onClick={() => state.requestCamera("fit")}
               >
-                <Maximize2 size={15} />
+                <Crosshair size={18} />
               </button>
               <button
                 className="icon-button"
@@ -617,7 +759,11 @@ export function App() {
           {help && (
             <div className="help-panel">
               <b>Explore in three dimensions</b>
-              <p>Drag to orbit · scroll to zoom · right-drag to pan.</p>
+              <p>Mouse: drag to orbit, scroll to zoom, right-drag to pan.</p>
+              <p>
+                Touch: one finger to rotate, pinch to zoom, two fingers to pan.
+                Tap a node to inspect it.
+              </p>
               <p>
                 Click a point or file to inspect. Unfold a group with Focus.
                 Switch Cloud / Layers to reorganize the same code.
@@ -628,6 +774,7 @@ export function App() {
             </div>
           )}
         </section>
+        <AnalysisWorkspace />
         <Inspector />
       </main>
       <Timeline />

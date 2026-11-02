@@ -74,6 +74,21 @@ export function layoutGraph(nodes: CodeNode[]): Layout {
       ],
     };
   }
+  for (const node of nodes.filter((n) => n.kind === "function")) {
+    const parent = node.parent ? result[node.parent] : undefined;
+    if (!parent) continue;
+    const angle = random(node.id + "child") * Math.PI * 2,
+      offset: Vec3 = [
+        Math.cos(angle) * 0.45,
+        (random(node.id + "height") - 0.5) * 0.65,
+        Math.sin(angle) * 0.45,
+      ];
+    result[node.id] = {
+      cloud: parent.cloud.map((v, i) => v + offset[i]) as Vec3,
+      layers: parent.layers.map((v, i) => v + offset[i] * 0.6) as Vec3,
+      focus: parent.focus.map((v, i) => v + offset[i]) as Vec3,
+    };
+  }
   return result;
 }
 export function morphPosition(p: NodePosition, t: number): Vec3 {

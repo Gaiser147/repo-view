@@ -8,6 +8,7 @@ interface Job {
   progress: string;
   snapshot?: RepoSnapshot;
   error?: string;
+  priority?: "foreground" | "background";
   worker?: Worker;
   timer?: ReturnType<typeof setTimeout>;
 }
@@ -22,6 +23,12 @@ export async function browserRequest<T>(
   if (url.pathname === "/api/analyses" && init?.method === "POST") {
     const body = analysisRequest.parse(JSON.parse(String(init.body))),
       repository = parseRepository(body.repository);
+    const priority = body.priority ?? "foreground";
+    if (
+      priority === "background" &&
+      [...jobs.values()].some((j) => j.status === "running")
+    )
+      throw new Error("Background analysis paused.");
     for (const job of jobs.values())
       if (job.status === "running") {
         job.worker?.terminate();
@@ -40,6 +47,7 @@ export async function browserRequest<T>(
       }),
       job: Job = {
         id,
+        priority,
         status: "running",
         progress: "Starting browser analysis…",
         worker,
@@ -81,6 +89,14 @@ export async function browserRequest<T>(
   const jobMatch = url.pathname.match(/^\/api\/analyses\/([^/]+)$/);
   if (jobMatch) {
     const job = jobs.get(jobMatch[1]);
+    if (init?.method === "DELETE" && job) {
+      job.worker?.terminate();
+      clearTimeout(job.timer);
+      job.worker = undefined;
+      job.status = "error";
+      job.error = "Analysis cancelled.";
+      return { cancelled: true } as T;
+    }
     if (!job) throw new Error("Analysis expired. Start it again.");
     return {
       id: job.id,
@@ -102,4 +118,15 @@ export async function browserRequest<T>(
   throw new Error(
     "This operation is unavailable in the browser version. Start a repository analysis.",
   );
+}
+
+export function cancelBrowserAnalyses() {
+  for (const job of jobs.values())
+    if (job.status === "running") {
+      job.worker?.terminate();
+      clearTimeout(job.timer);
+      job.worker = undefined;
+      job.status = "error";
+      job.error = "Analysis cancelled.";
+    }
 }

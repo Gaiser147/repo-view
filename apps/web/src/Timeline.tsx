@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -23,6 +23,8 @@ export function Timeline() {
   const chronological = [...commits].reverse(),
     index = chronological.findIndex((c) => c.sha === snapshot.sha),
     commit = chronological[index];
+  const { historyOpen, ciOpen, cacheStatus, cachedCommits, snapshotSource } =
+    useRepo();
   useEffect(() => {
     if (!playing || pending) return;
     const timer = setTimeout(() => {
@@ -34,7 +36,18 @@ export function Timeline() {
     }, 1400);
     return () => clearTimeout(timer);
   }, [playing, pending, index, snapshot.sha]);
+  const [scrub, setScrub] = useState(0),
+    scrubTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => setScrub(Math.max(0, index)), [index]);
+  useEffect(() => () => clearTimeout(scrubTimer.current), []);
+  const choose = (i: number) => {
+    clearTimeout(scrubTimer.current);
+    set({ playing: false });
+    const commit = chronological[i];
+    if (commit) void loadCommit(commit.sha);
+  };
   const step = (dir: number) => {
+    set({ playing: false });
     const next = chronological[index + dir];
     if (next) void loadCommit(next.sha);
   };
@@ -46,16 +59,36 @@ export function Timeline() {
       setOlderLoading(false);
     }
   }
+  if (!historyOpen) return null;
   return (
     <section className="history-panel" aria-label="Commit history">
       <div className="history-heading">
         <div>
           <History size={14} />
           <strong>Commit history</strong>
+          <span
+            className={`cache-indicator ${cacheStatus}`}
+            title={
+              snapshotSource === "cache"
+                ? "Cached immutable snapshot; CI reflects the time of analysis."
+                : "Nearby commits load slowly in the background."
+            }
+          >
+            {cacheStatus === "warming"
+              ? "Preparing nearby commit…"
+              : `${cachedCommits} cached`}
+          </span>
           <span className="subtle">{commits.length} commits</span>
           {snapshot.demo && <span className="demo-tag">DEMO</span>}
         </div>
         <div className="commit-caption">
+          <button
+            className="icon-button history-close"
+            aria-label="Close history"
+            onClick={() => set({ historyOpen: false })}
+          >
+            <X size={16} />
+          </button>
           <code data-testid="commit-sha">{snapshot.sha.slice(0, 7)}</code>
           <span>
             {commit?.message ??
@@ -78,7 +111,7 @@ export function Timeline() {
           <button
             className="icon-button"
             aria-label="Previous commit"
-            disabled={index <= 0 || pending}
+            disabled={index <= 0}
             onClick={() => step(-1)}
           >
             <ChevronLeft size={15} />
@@ -86,7 +119,7 @@ export function Timeline() {
           <button
             className="icon-button"
             aria-label="Next commit"
-            disabled={index < 0 || index >= chronological.length - 1 || pending}
+            disabled={index < 0 || index >= chronological.length - 1}
             onClick={() => step(1)}
           >
             <ChevronRight size={15} />
@@ -112,37 +145,56 @@ export function Timeline() {
             <Play size={17} />
           )}
         </button>
-        <div className="commit-track">
-          <div className="track-line" />
-          {chronological.map((c, i) => (
-            <button
-              key={c.sha}
-              className={`commit-tick ${index === i ? "current" : ""} ${i > index ? "future" : ""}`}
-              aria-label={`Commit ${c.sha.slice(0, 7)}: ${c.message}`}
-              aria-pressed={index === i}
-              title={`${new Date(c.date).toLocaleDateString("en-GB")} · ${c.message}`}
-              onClick={() => {
-                set({ playing: false });
-                void loadCommit(c.sha);
-              }}
-              onMouseEnter={() => setHover(c)}
-              onMouseLeave={() => setHover(null)}
-              style={
-                {
-                  "--tick-height": `${8 + (hash(c.sha) % 27)}px`,
-                } as React.CSSProperties
-              }
-            >
-              <i />
-              <b />
-            </button>
-          ))}
-          {hover && (
-            <div className="commit-tooltip">
-              <code>{hover.sha.slice(0, 7)}</code>
-              <span>{hover.message}</span>
-            </div>
-          )}
+        <div className="history-rail">
+          <div className="commit-track">
+            <div className="track-line" />
+            {chronological.map((c, i) => (
+              <button
+                key={c.sha}
+                className={`commit-tick ${index === i ? "current" : ""} ${i > index ? "future" : ""}`}
+                aria-label={`Commit ${c.sha.slice(0, 7)}: ${c.message}`}
+                aria-pressed={index === i}
+                title={`${new Date(c.date).toLocaleDateString("en-GB")} · ${c.message}`}
+                onClick={() => {
+                  set({ playing: false });
+                  void loadCommit(c.sha);
+                }}
+                onMouseEnter={() => setHover(c)}
+                onMouseLeave={() => setHover(null)}
+                style={
+                  {
+                    "--tick-height": `${8 + (hash(c.sha) % 27)}px`,
+                  } as React.CSSProperties
+                }
+              >
+                <i />
+                <b />
+              </button>
+            ))}
+            {hover && (
+              <div className="commit-tooltip">
+                <code>{hover.sha.slice(0, 7)}</code>
+                <span>{hover.message}</span>
+              </div>
+            )}
+          </div>
+          <input
+            className="history-slider"
+            type="range"
+            aria-label="Commit position"
+            min={0}
+            max={Math.max(0, chronological.length - 1)}
+            value={scrub}
+            disabled={!chronological.length}
+            onChange={(e) => {
+              const i = Number(e.target.value);
+              setScrub(i);
+              clearTimeout(scrubTimer.current);
+              scrubTimer.current = setTimeout(() => choose(i), 250);
+            }}
+            onPointerUp={() => choose(scrub)}
+            onKeyUp={() => choose(scrub)}
+          />
         </div>
       </div>
       <div className="timeline-dates">
@@ -177,13 +229,21 @@ export function Timeline() {
   );
 }
 export function PipelineStrip() {
-  const { snapshot, set } = useRepo(),
+  const { snapshot, set, ciOpen } = useRepo(),
     jobs = snapshot.pipeline.jobs;
+  if (!ciOpen) return null;
   return (
     <section className="pipeline-strip" aria-label="CI pipeline">
       <button
+        className="icon-button"
+        aria-label="Close CI"
+        onClick={() => set({ ciOpen: false })}
+      >
+        <X size={16} />
+      </button>
+      <button
         className="pipeline-title"
-        onClick={() => set({ view: "Pipelines" })}
+        onClick={() => useRepo.getState().toggleView("Pipelines")}
       >
         <GitCommitHorizontal size={16} />
         <span>
@@ -200,7 +260,7 @@ export function PipelineStrip() {
               {i > 0 && <ArrowRight size={14} className="stage-arrow" />}
               <button
                 className={`stage ${j.status}`}
-                onClick={() => set({ view: "Pipelines" })}
+                onClick={() => useRepo.getState().toggleView("Pipelines")}
               >
                 <span className="stage-icon">
                   {j.status === "success" ? (
@@ -239,7 +299,7 @@ export function PipelineStrip() {
       ) : (
         <button
           className="pipeline-more"
-          onClick={() => set({ view: "Pipelines" })}
+          onClick={() => useRepo.getState().toggleView("Pipelines")}
         >
           View workflow
           <ArrowRight size={13} />

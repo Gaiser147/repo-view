@@ -10,7 +10,7 @@ An interactive 3D code cloud morphs into layers without losing node identity. Un
 
 The hosted version needs no server or installation. It analyzes public repositories in a browser Web Worker, reads metadata/history/workflows directly from GitHub, and downloads bounded source files from pinned commit URLs. No GitHub token is embedded or requested. GitHub's unauthenticated public API quota applies per visitor/IP; rate-limit errors explain when to retry. Private repositories are not supported.
 
-Recent snapshots are cached locally in IndexedDB for up to five minutes, retaining at most twelve entries. Cache storage failure does not prevent analysis. Analysis still uses the 5,000-file, 20 MB text and 500 KB/file bounds and a 180-second worker deadline. Git download/cache and Node heap limits described below apply only to the optional Node server mode.
+Commit snapshots are reused immediately during a session and cached in IndexedDB for up to seven days (24 snapshots, bounded by 100,000 nodes). Unchanged source blobs are reused across commits in a separate 20 MB cache. While idle, a paced background queue prepares neighboring commits: a 2.5-second initial delay, at least four seconds between attempts, and at most six attempts per repository per hour in the current session. Foreground navigation takes priority; warming pauses during playback or while the tab is hidden. Settings can disable warming, and data-saver connections start with it disabled. Cache storage failure does not prevent analysis. Analysis still uses the 5,000-file, 20 MB text and 500 KB/file bounds and a 180-second worker deadline. Git download/cache and Node heap limits described below apply only to the optional Node server mode.
 
 Every push to `main` builds and deploys the static site through `.github/workflows/pages.yml`. GitHub Pages must use the **GitHub Actions** build source. To preview the same static build locally:
 
@@ -46,8 +46,10 @@ No repository scripts, dependencies, hooks or workflow steps are executed during
 
 ## Explore
 
-- **Cloud / Layers** morphs the same graph over 1.5 seconds. Drag to orbit, scroll to zoom, right-drag to pan.
-- Click a point, search result or tree entry to open the Inspector. Zoom closer to reveal function nodes. Select Functions to explore definitions and resolved calls.
+- **Cloud / Layers** morphs the same graph over 1.5 seconds. Drag to orbit, scroll or use +/− to zoom, and use Fit to frame the codebase. On tablets, pinch to zoom and use two fingers to pan.
+- Click a point, search result or tree entry to open the Inspector. Zoom closer to reveal functions and detail labels; the detail indicator shows the current level. Files and search provide equivalent navigation.
+- The toolbar independently hides Files, Inspector, History and CI. Expand cloud hides these panels and enters fullscreen where supported; exiting restores the previous layout. On tablets, Files and Inspector use a single drawer. Keyboard: F expands, +/− zoom, 0 fits and Escape dismisses the active surface.
+- Dependencies, Functions and Pipelines open dedicated workspaces with Back to cloud and Close controls. Search dependencies/functions, follow resolved calls, locate items in the cloud, or zoom and scroll workflow diagrams.
 - Use a group's focus icon to unfold it locally. Escape closes focus. Switching to global Layers retains selection and closes local focus.
 - Commit controls load actual snapshots atomically. Added and changed elements are highlighted using the Changes color mode; removed elements appear in the diff summary. Playback waits for each snapshot.
 - Pipelines shows workflow job dependencies and step details. Run states are matched to workflow path and exact job name. Matrix/expressions that cannot be matched remain unassessed.
@@ -74,7 +76,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-The browser suite includes desktop/mobile navigation, morph/focus, search, commit changes, invalid input, reduced motion, and a reproducible 5,000-file benchmark. Its CI floor is 10 FPS on Chromium's software renderer; the hardware target is 30 FPS and depends on GPU, resolution and graph density. First measured environment and results are recorded in `docs/verification.md`.
+The browser suite includes desktop/mobile navigation, direct point selection, pinch zoom, panel and fullscreen controls, closeable analysis workspaces, morph/focus, search, commit changes, invalid input, reduced motion, and a reproducible 5,000-file benchmark. `npm run test:pages` additionally checks static hosting and paced history caching without an API server. Its CI floor is 10 FPS on Chromium's software renderer; the hardware target is 30 FPS and depends on GPU, resolution and graph density. Initial results are recorded in `docs/verification.md`; the usability update is recorded in `docs/usability-verification.md`.
 
 ## Project structure
 

@@ -1,4 +1,3 @@
-import { pipelineDepths } from "../../../packages/core/src/pipeline";
 import { useMemo, useState, useEffect } from "react";
 import {
   ChevronRight,
@@ -14,7 +13,7 @@ import {
   Box,
   Braces,
 } from "lucide-react";
-import type { CodeNode, PipelineJob } from "../../../packages/core/src/index";
+import type { CodeNode } from "../../../packages/core/src/index";
 import { rateSnapshot } from "../../../packages/core/src/health";
 import { groupColor } from "./colors";
 import { useRepo } from "./state";
@@ -87,16 +86,16 @@ export function Files() {
     <aside className="files-panel" aria-label="Files">
       <div className="panel-heading">
         <span>EXPLORER</span>
+        <span className="subtle">
+          {snapshot.nodes.filter((n) => n.kind === "file").length}
+        </span>
         <button
-          className="icon-button mobile-only"
+          className="icon-button"
           aria-label="Close files"
           onClick={() => set({ filesOpen: false })}
         >
           <X size={15} />
         </button>
-        <span className="subtle">
-          {snapshot.nodes.filter((n) => n.kind === "file").length}
-        </span>
       </div>
       <div className="repo-tree scroll-area">
         {trees.map((t) => (
@@ -220,11 +219,9 @@ export function Inspector() {
         e.kind !== "contains",
     );
   const packageNodes = snapshot.nodes.filter((n) => n.kind === "package");
+  if (!useRepo.getState().inspectorOpen) return null;
   return (
-    <aside
-      className={`inspector ${inspector ? "is-open" : ""}`}
-      aria-label="Inspector"
-    >
+    <aside className="inspector is-open" aria-label="Inspector">
       <div className="panel-heading">
         <span>
           {inspector === "health"
@@ -234,18 +231,15 @@ export function Inspector() {
               : "REPOSITORY OVERVIEW"}
         </span>
         {snapshot.demo && <span className="demo-tag">DEMO</span>}
-        {inspector && (
-          <button
-            aria-label="Close inspector"
-            className="icon-button"
-            onClick={() => {
-              set({ inspector: null });
-              select(null);
-            }}
-          >
-            <X size={14} />
-          </button>
-        )}
+        <button
+          aria-label="Close inspector"
+          className="icon-button"
+          onClick={() => {
+            set({ inspectorOpen: false });
+          }}
+        >
+          <X size={14} />
+        </button>
       </div>
       <div className="inspector-content scroll-area">
         {inspector === "health" ? (
@@ -489,136 +483,5 @@ export function Inspector() {
         )}
       </div>
     </aside>
-  );
-}
-export function PipelineDetail() {
-  const { snapshot } = useRepo(),
-    [selected, setSelected] = useState<string | null>(null),
-    job = snapshot.pipeline.jobs.find((j) => j.id === selected);
-  const jobs = snapshot.pipeline.jobs;
-  const topology = useMemo(() => pipelineDepths(jobs), [jobs]);
-  const positions = new Map<string, { x: number; y: number }>(),
-    rows = new Map<number, number>();
-  for (const j of jobs) {
-    const d = topology.depths.get(j.id) ?? 0,
-      row = rows.get(d) ?? 0;
-    rows.set(d, row + 1);
-    positions.set(j.id, { x: 40 + d * 200, y: 65 + row * 100 });
-  }
-  const width = Math.max(650, ...[...positions.values()].map((p) => p.x + 180)),
-    height = Math.max(230, ...[...positions.values()].map((p) => p.y + 95));
-  return (
-    <section className="pipeline-detail">
-      <div className="section-heading">
-        Workflow jobs{" "}
-        <span>{snapshot.demo ? "DEMO DATA" : snapshot.sha.slice(0, 7)}</span>
-      </div>
-      <h2>From commit to production.</h2>
-      {topology.cycles.length > 0 && (
-        <p role="alert">
-          Workflow contains a dependency cycle or blocked jobs. Check needs
-          references.
-        </p>
-      )}
-      {!jobs.length ? (
-        <p>No GitHub Actions workflows at this commit.</p>
-      ) : (
-        <div className="pipeline-canvas scroll-area">
-          <svg
-            width={width}
-            height={height}
-            aria-label="Workflow dependency graph"
-          >
-            {snapshot.pipeline.edges.map((e, i) => {
-              const a = positions.get(e.source),
-                b = positions.get(e.target);
-              return (
-                a &&
-                b && (
-                  <path
-                    key={i}
-                    d={`M${a.x + 150},${a.y + 26} C${a.x + 180},${a.y + 26} ${b.x - 30},${b.y + 26} ${b.x},${b.y + 26}`}
-                    fill="none"
-                    stroke="#38566d"
-                  />
-                )
-              );
-            })}
-            {jobs.map((j) => {
-              const p = positions.get(j.id)!;
-              return (
-                <g
-                  key={j.id}
-                  transform={`translate(${p.x} ${p.y})`}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Inspect job ${j.name}`}
-                  onClick={() => setSelected(j.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") setSelected(j.id);
-                  }}
-                >
-                  <rect
-                    width="150"
-                    height="55"
-                    rx="8"
-                    fill={selected === j.id ? "#133345" : "#101e2b"}
-                    stroke={
-                      j.status === "success"
-                        ? "#509e8c"
-                        : j.status === "failure"
-                          ? "#d26c75"
-                          : "#3c5266"
-                    }
-                  />
-                  <text x="14" y="23" fill="#dbe8f7" fontSize="13">
-                    {j.name.slice(0, 19)}
-                  </text>
-                  <text x="14" y="42" fill="#93acbf" fontSize="10">
-                    {j.status === "unavailable" ? "No run available" : j.status}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-        </div>
-      )}
-      {job && (
-        <div className="job-inspector">
-          <h3>{job.name}</h3>
-          <p className="muted small">
-            {job.workflow} ·{" "}
-            {job.status === "unavailable" ? "No run available" : job.status}
-          </p>
-          {job.condition && (
-            <p>
-              Condition: <code>{job.condition}</code>
-            </p>
-          )}
-          {job.reusable && (
-            <p>
-              Reusable workflow: <code>{job.reusable}</code>
-            </p>
-          )}
-          <ol>
-            {job.steps.map((s, i) => (
-              <li key={i}>
-                <code>{s}</code>
-              </li>
-            ))}
-          </ol>
-          {job.url && (
-            <a href={job.url} target="_blank" rel="noreferrer">
-              View job on GitHub
-            </a>
-          )}
-        </div>
-      )}
-      {snapshot.pipeline.warnings.map((w, i) => (
-        <p className="coverage-note" key={i}>
-          {w}
-        </p>
-      ))}
-    </section>
   );
 }

@@ -10,15 +10,36 @@ export function spatialGraph(
   selectedId: string | null,
   view: string,
 ) {
+  const selected = snapshot.nodes.find((n) => n.id === selectedId),
+    group = focus ?? (selected?.kind === "package" ? selected.group : null),
+    file =
+      selected?.kind === "function"
+        ? selected.parent
+        : selected?.kind === "file"
+          ? selected.id
+          : null;
+  const neighbors = new Set(
+    snapshot.edges
+      .filter(
+        (e) =>
+          e.kind === "call" &&
+          (e.source === selectedId || e.target === selectedId),
+      )
+      .flatMap((e) => [e.source, e.target]),
+  );
   const nodes = snapshot.nodes.filter((n) =>
     level === "packages"
       ? n.kind === "package"
       : n.kind === "file" ||
+        (n.kind === "function" && n.id === selectedId) ||
         (n.kind === "function" &&
           level === "functions" &&
           (view === "Functions" ||
-            n.group === focus ||
-            n.parent === selectedId)),
+            (!group && !file) ||
+            n.id === selectedId ||
+            n.group === group ||
+            n.parent === file ||
+            neighbors.has(n.id))),
   );
   const ids = new Set(nodes.map((n) => n.id)),
     byId = new Map(snapshot.nodes.map((n) => [n.id, n])),

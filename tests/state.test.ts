@@ -104,3 +104,52 @@ it("ignores older-history results after switching workspaces", async () => {
   expect(useRepo.getState().commits).toEqual(expected);
   expect(useRepo.getState().error).toBeNull();
 });
+
+it("returns to a visited real commit from memory without another analysis request", async () => {
+  const { loadCommit } = await import("../apps/web/src/state");
+  const a = {
+      ...createDemoSnapshot(2),
+      repository: "memory/real",
+      demo: false,
+    },
+    b = { ...createDemoSnapshot(3), repository: "memory/real", demo: false };
+  const fetcher = vi.fn(async (url: string) =>
+    url === "/api/analyses"
+      ? Response.json({ id: "memory" })
+      : Response.json({ status: "complete", snapshot: a }),
+  );
+  vi.stubGlobal("fetch", fetcher);
+  await loadRepository(a.repository, a.sha, "main", true);
+  const calls = fetcher.mock.calls.length;
+  useRepo.getState().replace(b);
+  await loadCommit(a.sha);
+  expect(fetcher.mock.calls.length).toBe(calls);
+  expect(useRepo.getState().snapshot.sha).toBe(a.sha);
+  expect(useRepo.getState().snapshotSource).toBe("cache");
+  expect(useRepo.getState().pending).toBe(false);
+});
+
+it("reselecting the displayed commit cancels a different pending transition", async () => {
+  const { loadCommit } = await import("../apps/web/src/state"),
+    a = { ...createDemoSnapshot(4), repository: "race/current", demo: false },
+    b = { ...createDemoSnapshot(5), repository: "race/current", demo: false };
+  useRepo.getState().replace(a);
+  let finish!: (response: Response) => void;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) =>
+      url === "/api/analyses"
+        ? Response.json({ id: "pending" })
+        : new Promise<Response>((r) => {
+            finish = r;
+          }),
+    ),
+  );
+  const pending = loadCommit(b.sha);
+  await vi.waitFor(() => expect(finish).toBeTypeOf("function"));
+  await loadCommit(a.sha);
+  finish(Response.json({ status: "complete", snapshot: b }));
+  await pending;
+  expect(useRepo.getState().snapshot.sha).toBe(a.sha);
+  expect(useRepo.getState().pending).toBe(false);
+});
