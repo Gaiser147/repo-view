@@ -137,7 +137,11 @@ export function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <a className="brand" href="/" aria-label="repo-view home">
+        <a
+          className="brand"
+          href={import.meta.env.BASE_URL}
+          aria-label="repo-view home"
+        >
           <Network size={24} />
           <span>repo-view</span>
           <span className="brand-divider" />

@@ -95,6 +95,13 @@ export const useRepo = create<State>((set, get) => ({
 }));
 let generation = 0;
 export async function json<T>(url: string, init?: RequestInit): Promise<T> {
+  if (
+    import.meta.env.VITE_ANALYSIS_MODE === "browser" &&
+    url.startsWith("/api/")
+  ) {
+    const { browserRequest } = await import("./browser/api");
+    return browserRequest<T>(url, init);
+  }
   const res = await fetch(url, init);
   const value = await res.json();
   if (!res.ok)

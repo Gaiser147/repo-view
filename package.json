@@ -16,7 +16,10 @@
     "start": "node --env-file-if-exists=.env --use-env-proxy --import tsx apps/server/src/index.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "build:pages": "npm run build -w @repo-view/web -- --mode pages",
+    "preview:pages": "npm run preview:pages -w @repo-view/web",
+    "test:pages": "playwright test --config playwright.pages.config.ts"
   },
   "dependencies": {
     "@fastify/static": "^10.1.8",

@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build"
+    "build": "vite build",
+    "preview:pages": "vite preview --mode pages --host 0.0.0.0 --port 4173"
   }
 }
