@@ -1,1 +1,6 @@
-{"name":"@repo-view/core","private":true,"type":"module","exports":"./src/index.ts"}
+{
+  "name": "@repo-view/core",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts"
+}
