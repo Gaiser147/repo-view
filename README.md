@@ -4,6 +4,24 @@ Explore the shape, architecture and evolution of a GitHub repository.
 
 An interactive 3D code cloud morphs into layers without losing node identity. Unfold one package locally, follow resolved dependencies and function calls, scrub through commit snapshots, inspect GitHub Actions workflows, and open the evidence behind a structural health rating.
 
+## Use on GitHub Pages
+
+**https://gaiser147.github.io/repo-view/**
+
+The hosted version needs no server or installation. It analyzes public repositories in a browser Web Worker, reads metadata/history/workflows directly from GitHub, and downloads bounded source files from pinned commit URLs. No GitHub token is embedded or requested. GitHub's unauthenticated public API quota applies per visitor/IP; rate-limit errors explain when to retry. Private repositories are not supported.
+
+Recent snapshots are cached locally in IndexedDB for up to five minutes, retaining at most twelve entries. Cache storage failure does not prevent analysis. Analysis still uses the 5,000-file, 20 MB text and 500 KB/file bounds and a 180-second worker deadline. Git download/cache and Node heap limits described below apply only to the optional Node server mode.
+
+Every push to `main` builds and deploys the static site through `.github/workflows/pages.yml`. GitHub Pages must use the **GitHub Actions** build source. To preview the same static build locally:
+
+```sh
+npm ci
+npm run build:pages
+npm run preview:pages
+```
+
+Open **http://localhost:4173/repo-view/**. The project base path is configured in the Vite Pages mode; forks using another repository name must change that base path. The local server-backed mode below remains optional.
+
 ## Run locally
 
 Requires **Node.js 24+**, npm and Git on your PATH.
