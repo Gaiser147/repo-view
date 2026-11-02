@@ -1,3 +1,4 @@
+import { ApiAllowance } from "./ExplorationControls";
 import { useEffect, useState, useRef } from "react";
 import {
   ChevronLeft,
@@ -76,9 +77,12 @@ export function Timeline() {
           >
             {cacheStatus === "warming"
               ? "Preparing nearby commit…"
-              : `${cachedCommits} cached`}
+              : cacheStatus === "paused"
+                ? `Cache paused · ${cachedCommits} cached`
+                : `${cachedCommits} cached`}
           </span>
           <span className="subtle">{commits.length} commits</span>
+          <ApiAllowance />
           {snapshot.demo && <span className="demo-tag">DEMO</span>}
         </div>
         <div className="commit-caption">

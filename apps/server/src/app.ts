@@ -125,6 +125,21 @@ export async function createApp(
   );
   app.get<{
     Params: { owner: string; repo: string };
+    Querystring: { page?: string };
+  }>("/api/repos/:owner/:repo/branches", async (req) => {
+    const repo = parseRepository(`${req.params.owner}/${req.params.repo}`),
+      page = Number(req.query.page ?? 1);
+    if (!Number.isInteger(page) || page < 1 || page > 100)
+      throw new Error("Invalid branch page.");
+    return provider.branches
+      ? provider.branches(repo, page)
+      : {
+          branches: [(await provider.defaultBranch?.(repo)) ?? "main"],
+          hasMore: false,
+        };
+  });
+  app.get<{
+    Params: { owner: string; repo: string };
     Querystring: { ref?: string; page?: string };
   }>("/api/repos/:owner/:repo/commits", async (req) => {
     const repo = parseRepository(`${req.params.owner}/${req.params.repo}`);

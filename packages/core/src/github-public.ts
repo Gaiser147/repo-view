@@ -42,8 +42,8 @@ export async function readPublicHistory(
   const repository = parseRepository(input);
   if (!Number.isInteger(page) || page < 1 || page > 100)
     throw new Error("Invalid history page.");
-  const meta = await publicMetadata(repository, fetcher),
-    branch = ref ?? meta.default_branch;
+  const branch =
+    ref ?? (await publicMetadata(repository, fetcher)).default_branch;
   const commits = await publicApi<any[] | null>(
     `repos/${repository}/commits?sha=${encodeURIComponent(branch)}&per_page=50&page=${page}`,
     fetcher,
@@ -57,5 +57,23 @@ export async function readPublicHistory(
       date: c.commit.author?.date ?? "",
       author: c.commit.author?.name ?? "Unknown",
     })),
+  };
+}
+
+export async function readPublicBranches(
+  input: string,
+  page = 1,
+  fetcher: Fetcher = fetch,
+) {
+  const repository = parseRepository(input);
+  if (!Number.isInteger(page) || page < 1 || page > 100)
+    throw new Error("Invalid branch page.");
+  const values = await publicApi<{ name: string }[]>(
+    `repos/${repository}/branches?per_page=100&page=${page}`,
+    fetcher,
+  );
+  return {
+    branches: values.map((b) => b.name),
+    hasMore: values.length === 100,
   };
 }

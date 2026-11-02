@@ -47,16 +47,20 @@ export async function analyzePublicRepository(
 ): Promise<RepoSnapshot> {
   const repository = parseRepository(input);
   onProgress("Connecting directly to public GitHub…");
-  const meta = await metadata(repository, fetcher);
-  const commit = await api<{ sha: string } | null>(
-    `repos/${repository}/commits/${encodeURIComponent(ref ?? meta.default_branch)}`,
-    fetcher,
-    true,
-  );
-  if (!commit) return analyzeFiles(repository, "empty", []);
-  if (!/^[a-f0-9]{40}$/i.test(commit.sha))
+  const pinned = !!ref && /^[a-f0-9]{40}$/i.test(ref);
+  let sha = ref!;
+  if (!pinned) {
+    const meta = await metadata(repository, fetcher);
+    const commit = await api<{ sha: string } | null>(
+      `repos/${repository}/commits/${encodeURIComponent(ref ?? meta.default_branch)}`,
+      fetcher,
+      true,
+    );
+    if (!commit) return analyzeFiles(repository, "empty", []);
+    sha = commit.sha;
+  }
+  if (!/^[a-f0-9]{40}$/i.test(sha))
     throw new Error("GitHub returned an invalid commit.");
-  const sha = commit.sha;
   const tree = await api<{
     truncated: boolean;
     tree: {
@@ -145,7 +149,11 @@ export async function analyzePublicRepository(
     snapshot.pipeline.warnings.push(
       `${failed} source downloads were unavailable. Coverage excludes those files.`,
     );
-  if (snapshot.pipeline.jobs.length)
+  if (pinned && snapshot.pipeline.jobs.length)
+    snapshot.pipeline.warnings.push(
+      "Live CI results are not loaded for historical snapshots to conserve the public API quota. Workflow structure is available.",
+    );
+  if (!pinned && snapshot.pipeline.jobs.length)
     try {
       const runs = await api<{ workflow_runs: any[] }>(
           `repos/${repository}/actions/runs?head_sha=${sha}&per_page=20`,

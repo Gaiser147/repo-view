@@ -3060,3 +3060,288 @@ p {
 .panel-heading > .subtle + .icon-button {
   margin-right: -5px;
 }
+/* Spatial annotations stay quieter than the code cloud. The list and point hit targets
+   provide touch selection without placing large opaque buttons over the graph. */
+.cluster-label,
+.node-label {
+  min-height: 22px;
+  padding: 2px 5px;
+  max-width: 136px;
+  gap: 5px;
+  font-size: 10px;
+  line-height: 16px;
+  background: #0815228c;
+  border-color: #39557066;
+  box-shadow: none;
+  text-shadow: 0 1px 3px #030913;
+}
+.cluster-label small {
+  display: none;
+}
+.cluster-label:hover,
+.node-label:hover,
+.cluster-label:focus-visible,
+.node-label:focus-visible {
+  background: #12314b;
+  border-color: #68caff;
+}
+.cluster-label.focused,
+.node-label.selected {
+  background: #12382e;
+  border-color: #77e4c6;
+}
+.branch-switcher,
+.group-visibility {
+  position: relative;
+  min-width: 0;
+}
+.branch-indicator {
+  display: flex;
+  min-height: var(--control);
+  max-width: 200px;
+  padding: 0 8px;
+  border: 1px solid #34506a;
+  border-radius: 6px;
+}
+.branch-indicator span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.branch-indicator svg {
+  flex-shrink: 0;
+}
+.control-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  z-index: 35;
+  width: 320px;
+  max-width: calc(100vw - 24px);
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid #34506a;
+  border-radius: 8px;
+  box-shadow: 0 12px 36px #0009;
+}
+.branch-menu {
+  left: 0;
+}
+.group-menu {
+  right: 0;
+}
+.control-popover-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.control-popover-heading b {
+  font-size: 13px;
+  font-weight: 550;
+}
+.control-popover p {
+  margin: 8px 0 12px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.control-popover input[type="search"] {
+  width: 100%;
+  min-height: 40px;
+}
+.branch-list {
+  max-height: min(330px, 45dvh);
+  margin-top: 8px;
+}
+.branch-list > button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  text-align: left;
+  padding: 8px;
+}
+.branch-list > button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.branch-list small {
+  margin-left: auto;
+  color: #77e4c6;
+}
+.branch-list > button:hover,
+.branch-list > button[aria-current="true"] {
+  background: #12304a;
+}
+.branch-enter {
+  display: block;
+  width: 100%;
+  text-align: left;
+  min-height: 40px;
+  padding: 8px;
+  color: #8ed4ff;
+  overflow-wrap: anywhere;
+}
+.workspace-mode-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.visibility-button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: var(--control);
+  padding: 0 9px;
+  border: 1px solid #34506a;
+  border-radius: 6px;
+  font-size: 11px;
+}
+.visibility-button.active {
+  color: #77e4c6;
+  border-color: #517d72;
+}
+.visibility-list {
+  max-height: min(330px, 45dvh);
+}
+.visibility-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.visibility-row label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  cursor: pointer;
+}
+.visibility-row label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+}
+.visibility-row > button:last-child {
+  min-height: 36px;
+  padding: 0 8px;
+  color: #8ed4ff;
+}
+.isolate-choice {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  font-size: 11px;
+}
+.show-all-groups {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 8px;
+  min-height: 40px;
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+  padding-top: 8px;
+  color: #8ed4ff;
+}
+.api-allowance {
+  color: var(--muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.api-allowance.low {
+  color: #edc27f;
+}
+@media (pointer: coarse) {
+  .branch-list > button,
+  .branch-enter,
+  .visibility-row label,
+  .visibility-row > button:last-child,
+  .visibility-button,
+  .show-all-groups {
+    min-height: 44px;
+  }
+}
+@media (max-width: 760px) {
+  .branch-indicator {
+    max-width: 120px;
+  }
+  .branch-menu {
+    position: fixed;
+    left: 12px;
+    top: 150px;
+  }
+  .group-menu {
+    position: fixed;
+    right: 12px;
+    top: 230px;
+  }
+  .is-expanded .group-menu {
+    top: 60px;
+  }
+  .api-allowance {
+    max-width: 115px;
+    white-space: normal;
+    line-height: 1.4;
+  }
+}
+@media (max-width: 760px) {
+  .repository-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-rows: 38px 36px;
+    gap: 4px 8px;
+  }
+  .repository-button {
+    max-width: 100%;
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .repository-bar > .demo-tag {
+    display: none;
+  }
+  .branch-switcher {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .health-button {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .search-wrap {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .workspace-mode-actions {
+    gap: 4px;
+  }
+  .expand-button span {
+    display: none;
+  }
+  .visibility-button {
+    min-width: 36px;
+    justify-content: center;
+  }
+  .control-popover {
+    max-height: calc(100dvh - 245px);
+    overflow: auto;
+  }
+  .branch-menu {
+    max-height: calc(100dvh - 165px);
+  }
+  .is-expanded .group-menu {
+    max-height: calc(100dvh - 75px);
+  }
+}
+@media (max-width: 480px) {
+  .visibility-button > span,
+  .visibility-button > svg:last-child {
+    display: none;
+  }
+}

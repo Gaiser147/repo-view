@@ -1,6 +1,8 @@
 import type { RepoSnapshot } from "../../../../packages/core/src/index";
 import { analysisRequest } from "../../../../packages/core/src/index";
 import { parseRepository } from "../../../../packages/core/src/repository";
+import { publicGithub } from "./github-client";
+import { readPublicBranches } from "../../../../packages/core/src/github-public";
 import { readPublicHistory } from "../../../../packages/core/src/github-public";
 interface Job {
   id: string;
@@ -10,6 +12,7 @@ interface Job {
   error?: string;
   priority?: "foreground" | "background";
   worker?: Worker;
+  controller?: AbortController;
   timer?: ReturnType<typeof setTimeout>;
 }
 const jobs = new Map<string, Job>();
@@ -31,6 +34,7 @@ export async function browserRequest<T>(
       throw new Error("Background analysis paused.");
     for (const job of jobs.values())
       if (job.status === "running") {
+        job.controller?.abort();
         job.worker?.terminate();
         clearTimeout(job.timer);
         job.worker = undefined;
@@ -54,6 +58,7 @@ export async function browserRequest<T>(
       };
     jobs.set(id, job);
     const stop = () => {
+      controller.abort();
       clearTimeout(job.timer);
       worker.terminate();
       job.worker = undefined;
@@ -64,8 +69,45 @@ export async function browserRequest<T>(
         "Browser analysis exceeded 180 seconds. Try a smaller repository.";
       stop();
     }, 180000);
-    worker.onmessage = (event) => {
-      if (event.data.progress) job.progress = event.data.progress;
+    const controller = new AbortController();
+    job.controller = controller;
+    worker.onmessage = async (event) => {
+      if (event.data.apiRequest) {
+        const { requestId, url } = event.data.apiRequest;
+        try {
+          if (!url.startsWith("https://api.github.com/"))
+            throw new Error("Invalid API request.");
+          const response = await publicGithub.request(
+            url,
+            {
+              signal: controller.signal,
+              headers: { Accept: "application/vnd.github+json" },
+            },
+            priority === "background",
+          );
+          const body = await response.text();
+          if (job.status === "running")
+            worker.postMessage({
+              apiResponse: {
+                requestId,
+                status: response.status,
+                headers: [...response.headers],
+                body,
+              },
+            });
+        } catch (error) {
+          if (job.status === "running")
+            worker.postMessage({
+              apiResponse: {
+                requestId,
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : "GitHub request failed.",
+              },
+            });
+        }
+      } else if (event.data.progress) job.progress = event.data.progress;
       else if (event.data.snapshot) {
         job.status = "complete";
         job.progress = "Ready";
@@ -90,6 +132,7 @@ export async function browserRequest<T>(
   if (jobMatch) {
     const job = jobs.get(jobMatch[1]);
     if (init?.method === "DELETE" && job) {
+      job.controller?.abort();
       job.worker?.terminate();
       clearTimeout(job.timer);
       job.worker = undefined;
@@ -106,6 +149,16 @@ export async function browserRequest<T>(
       error: job.error,
     } as T;
   }
+  const branches = url.pathname.match(
+    /^\/api\/repos\/([^/]+)\/([^/]+)\/branches$/,
+  );
+  if (branches)
+    return (await readPublicBranches(
+      `${branches[1]}/${branches[2]}`,
+      Number(url.searchParams.get("page") ?? 1),
+      ((input, init) =>
+        publicGithub.request(String(input), init)) as typeof fetch,
+    )) as T;
   const history = url.pathname.match(
     /^\/api\/repos\/([^/]+)\/([^/]+)\/commits$/,
   );
@@ -114,6 +167,8 @@ export async function browserRequest<T>(
       `${history[1]}/${history[2]}`,
       url.searchParams.get("ref") ?? undefined,
       Number(url.searchParams.get("page") ?? 1),
+      ((input, init) =>
+        publicGithub.request(String(input), init)) as typeof fetch,
     )) as T;
   throw new Error(
     "This operation is unavailable in the browser version. Start a repository analysis.",
@@ -123,6 +178,7 @@ export async function browserRequest<T>(
 export function cancelBrowserAnalyses() {
   for (const job of jobs.values())
     if (job.status === "running") {
+      job.controller?.abort();
       job.worker?.terminate();
       clearTimeout(job.timer);
       job.worker = undefined;

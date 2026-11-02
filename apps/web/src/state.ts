@@ -30,6 +30,8 @@ interface State extends PanelState {
   commits: Commit[];
   selectedId: string | null;
   focus: string | null;
+  hiddenGroups: string[];
+  isolateFocus: boolean;
   layout: "cloud" | "layers";
   view: View;
   color: "module" | "complexity" | "language" | "changes";
@@ -65,6 +67,7 @@ interface State extends PanelState {
   toggleExpanded: (value?: boolean) => void;
   requestCamera: (action: CameraAction, nodeId?: string) => void;
   locate: (id: string) => void;
+  focusGroup: (group: string) => void;
 }
 const narrow = () => typeof innerWidth !== "undefined" && innerWidth < 1200;
 const initial = createDemoSnapshot(49),
@@ -81,6 +84,8 @@ export const useRepo = create<State>((set, get) => ({
   commits: demoCommits,
   selectedId: null,
   focus: null,
+  hiddenGroups: [],
+  isolateFocus: false,
   layout: "cloud",
   view: "Explore",
   color: "module",
@@ -114,13 +119,29 @@ export const useRepo = create<State>((set, get) => ({
   prefetchEnabled: !saveData,
   snapshotSource: "analysis",
   set: (patch) => set(patch),
-  select: (id) =>
+  select: (id) => {
+    const node = get().snapshot.nodes.find((n) => n.id === id);
     set({
+      ...(node
+        ? {
+            hiddenGroups: get().hiddenGroups.filter((g) => g !== node.group),
+            ...(get().isolateFocus && get().focus !== node.group
+              ? { focus: null, isolateFocus: false }
+              : {}),
+          }
+        : {}),
       selectedId: id,
       inspector: id ? "node" : null,
       inspectorOpen: !!id,
       query: "",
       ...(id && narrow() ? { filesOpen: false } : {}),
+    });
+  },
+  focusGroup: (group) =>
+    set({
+      focus: get().focus === group ? null : group,
+      selectedId: null,
+      hiddenGroups: get().hiddenGroups.filter((g) => g !== group),
     }),
   toggleFiles: () =>
     set({
@@ -204,7 +225,17 @@ export const useRepo = create<State>((set, get) => ({
       diff,
       selectedId:
         same && s.nodes.some((n) => n.id === selected) ? selected : null,
-      focus: same ? get().focus : null,
+      focus:
+        same && s.nodes.some((n) => n.group === get().focus)
+          ? get().focus
+          : null,
+      hiddenGroups: same
+        ? get().hiddenGroups.filter((g) => s.nodes.some((n) => n.group === g))
+        : [],
+      isolateFocus:
+        same && s.nodes.some((n) => n.group === get().focus)
+          ? get().isolateFocus
+          : false,
       pending: false,
       error: null,
       query: "",
