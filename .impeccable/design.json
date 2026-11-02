@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-02T12:07:13.034036+00:00",
+  "generatedAt": "2026-11-02T13:43:48.199278+00:00",
   "title": "Design System: repo-view",
   "extensions": {
     "typographyMeta": {
@@ -15,18 +15,18 @@
     },
     "shadows": [
       {
-        "name": "morph-control",
-        "value": "0 6px 24px #0003",
-        "purpose": "Floating graph layout control."
+        "name": "cluster-label",
+        "value": "0 7px 18px #0004",
+        "purpose": "Readable labels above spatial content."
       },
       {
         "name": "search-results",
-        "value": "0 12px 40px #000a",
+        "value": "0 12px 36px #0008",
         "purpose": "Search result overlay."
       },
       {
         "name": "settings",
-        "value": "0 14px 40px #0009",
+        "value": "0 14px 38px #0008",
         "purpose": "Floating settings panel."
       }
     ],
@@ -42,32 +42,36 @@
         "purpose": "Unfold one group while preserving surrounding positions."
       },
       {
-        "name": "control-background",
-        "value": "0.2s",
-        "purpose": "Morph control background transition."
-      },
-      {
         "name": "reduced-motion-css",
         "value": "0.001ms",
         "purpose": "CSS transition and animation duration under prefers-reduced-motion."
+      },
+      {
+        "name": "camera",
+        "value": "1.1s; smoothing 1 - exp(-8 * min(dt, 0.1))",
+        "purpose": "Interrupted by user camera interaction; immediate under Reduced Motion."
       }
     ],
     "breakpoints": [
       {
-        "name": "wide",
-        "value": "min-width: 1650px"
+        "name": "compact-chrome",
+        "value": "max-width: 1360px"
       },
       {
-        "name": "compact-desktop",
-        "value": "max-width: 1250px"
-      },
-      {
-        "name": "inspector-overlay",
-        "value": "max-width: 1000px"
+        "name": "panel-drawers",
+        "value": "max-width: 1199px"
       },
       {
         "name": "mobile",
-        "value": "max-width: 700px"
+        "value": "max-width: 760px"
+      },
+      {
+        "name": "narrow-mobile",
+        "value": "max-width: 430px"
+      },
+      {
+        "name": "compact-height",
+        "value": "max-height: 650px"
       }
     ]
   },
@@ -78,15 +82,15 @@
       "refersTo": "button-primary",
       "description": "Compact blue action surface.",
       "html": "<button class=\"ds-primary\">Apply layer assignments</button>",
-      "css": ".ds-primary{font:11px \"Inter Variable\",sans-serif;color:#d7e2f0;background:#183e57;border:1px solid #346786;border-radius:5px;padding:10px 14px;cursor:pointer}.ds-primary:hover{background:#20516f;color:#fff}.ds-primary:focus-visible{outline:2px solid var(--cyan,#57c6ff);outline-offset:4px}.ds-primary:disabled{opacity:.35;cursor:not-allowed}"
+      "css": ".ds-primary{display:inline-flex;align-items:center;justify-content:center;font:12px \"Inter Variable\",sans-serif;color:#e0f3ff;background:#16405b;border:1px solid #3e789e;border-radius:6px;min-height:40px;padding:10px 15px;cursor:pointer}.ds-primary:hover{background:#205575;color:#fff}.ds-primary:focus-visible{outline:2px solid var(--cyan,#68caff);outline-offset:3px}.ds-primary:disabled{opacity:.4;cursor:not-allowed}"
     },
     {
       "name": "Icon button",
       "kind": "button",
       "refersTo": "icon-button",
       "description": "Compact graph and panel action.",
-      "html": "<button class=\"ds-icon\" aria-label=\"Reset camera\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path d=\"M3 11a9 9 0 1 1 2.6 7M3 4v7h7\"/></svg></button>",
-      "css": ".ds-icon{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:4px;color:#8ea3bb;background:none;cursor:pointer}.ds-icon:hover{background:#142437;color:#7bcfff}.ds-icon:focus-visible{outline:2px solid var(--cyan,#57c6ff);outline-offset:4px}"
+      "html": "<button class=\"ds-icon\" aria-label=\"Fit cloud\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path d=\"M3 11a9 9 0 1 1 2.6 7M3 4v7h7\"/></svg></button>",
+      "css": ".ds-icon{width:var(--control,36px);height:var(--control,36px);display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:6px;color:#9fb6ce;background:none;cursor:pointer}.ds-icon:hover{background:#183048;color:#8ed9ff}.ds-icon:focus-visible{outline:2px solid var(--cyan,#68caff);outline-offset:3px}@media(max-width:1199px){.ds-icon{width:42px;height:42px}}@media(pointer:coarse){.ds-icon{width:44px;height:44px}}"
     },
     {
       "name": "Repository field",
@@ -94,28 +98,28 @@
       "refersTo": "input",
       "description": "Dark field for repository input and settings.",
       "html": "<input class=\"ds-field\" aria-label=\"Repository URL\" placeholder=\"https://github.com/owner/repository\">",
-      "css": ".ds-field{font:13px \"Inter Variable\",sans-serif;color:#dce8f7;background:#0c1623;border:1px solid #293d52;border-radius:5px;padding:9px 11px;caret-color:var(--cyan,#57c6ff)}.ds-field::placeholder{color:var(--muted,#8a9bb1)}.ds-field:focus-visible{outline:2px solid var(--cyan,#57c6ff);outline-offset:4px}"
+      "css": ".ds-field{font:13px \"Inter Variable\",sans-serif;color:#e1ecf6;background:#0c1826;border:1px solid #34506a;border-radius:6px;padding:10px 12px;caret-color:var(--cyan,#68caff)}.ds-field::placeholder{color:#91a8c0}.ds-field:focus-visible{outline:2px solid var(--cyan,#68caff);outline-offset:3px}"
     },
     {
       "name": "Primary navigation",
       "kind": "nav",
-      "description": "Compact tabs with a cyan active underline.",
+      "description": "Closeable analysis navigation with a clear cyan active underline.",
       "html": "<nav class=\"ds-nav\"><button class=\"ds-active\" aria-current=\"page\">Explore</button><button>Dependencies</button></nav>",
-      "css": ".ds-nav{display:flex;background:#090f19;height:63px;gap:9px}.ds-nav button{font:11px \"Inter Variable\",sans-serif;color:#92a4b9;border:0;background:none;padding:0 12px;position:relative;cursor:pointer}.ds-nav button:hover{color:#fff}.ds-nav .ds-active{color:#75caff}.ds-nav .ds-active:after{content:\"\";position:absolute;bottom:0;left:8px;right:8px;height:2px;background:#5ac3ff;box-shadow:0 -3px 15px #3293d277}.ds-nav button:focus-visible{outline:2px solid var(--cyan,#57c6ff);outline-offset:4px}"
+      "css": ".ds-nav{display:flex;background:#09111c;height:58px;gap:4px}.ds-nav button{font:12px \"Inter Variable\",sans-serif;color:#a2b6cb;border:0;background:none;padding:0 12px;min-height:44px;position:relative;cursor:pointer}.ds-nav button:hover{color:#fff}.ds-nav .ds-active{color:#86d8ff}.ds-nav .ds-active:after{content:\"\";position:absolute;bottom:0;left:10px;right:10px;height:2px;background:#71d1ff}.ds-nav button:focus-visible{outline:2px solid var(--cyan,#68caff);outline-offset:3px}"
     },
     {
       "name": "Morph control",
       "kind": "custom",
       "description": "Cloud and Layers targets for one persistent graph.",
       "html": "<div class=\"ds-morph\"><button class=\"ds-active\" aria-pressed=\"true\">Cloud</button><span></span><button aria-pressed=\"false\">Layers</button></div>",
-      "css": ".ds-morph{display:inline-flex;align-items:center;padding:4px;border:1px solid #29435d;border-radius:7px;background:#0a1422e6;box-shadow:0 6px 24px #0003}.ds-morph button{font:10px \"Inter Variable\",sans-serif;padding:7px 12px;border:0;border-radius:4px;background:none;color:#8fa8c2;transition:background .2s;cursor:pointer}.ds-morph button:hover{color:#fff}.ds-morph .ds-active{background:#163b58;color:#8ed6ff;box-shadow:inset 0 0 0 1px #306b95}.ds-morph span{width:18px;height:1px;background:#2c5878}.ds-morph button:focus-visible{outline:2px solid var(--cyan,#57c6ff);outline-offset:4px}@media(prefers-reduced-motion:reduce){.ds-morph button{transition-duration:.001ms}}"
+      "css": ".ds-morph{display:inline-flex;align-items:center;padding:4px;border:1px solid #395d7c;border-radius:8px;background:#0b1929eb}.ds-morph button{font:12px \"Inter Variable\",sans-serif;min-height:34px;padding:0 13px;border:0;border-radius:5px;background:none;color:#a8c2db;cursor:pointer}.ds-morph button:hover{color:#fff}.ds-morph .ds-active{background:#1b4968;color:#b4e5ff;box-shadow:inset 0 0 0 1px #4e8db6}.ds-morph span{width:18px;height:1px;background:#4b7899}.ds-morph button:focus-visible{outline:2px solid var(--cyan,#68caff);outline-offset:3px}@media(pointer:coarse){.ds-morph button{min-height:44px}}"
     },
     {
       "name": "Demo label",
       "kind": "chip",
       "description": "Explicit non-interactive demo data marker.",
       "html": "<span class=\"ds-demo\">DEMO</span>",
-      "css": ".ds-demo{display:inline-block;color:#72b8e5;background:#0d2437;border:1px solid #23455e;border-radius:4px;font:500 8px \"JetBrains Mono\",monospace;letter-spacing:.06em;padding:3px 6px;white-space:nowrap}"
+      "css": ".ds-demo{display:inline-flex;align-items:center;width:max-content;color:#9cd3f4;background:#102a40;border:1px solid #34516a;border-radius:4px;font:9px \"JetBrains Mono\",monospace;letter-spacing:.04em;padding:4px 7px;white-space:nowrap}"
     }
   ],
   "narrative": {

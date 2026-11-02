@@ -42,3 +42,11 @@ it("computes dense shared-ancestor pipeline depths in linear work and flags cycl
   ]);
   expect(cycle.cycles).toHaveLength(2);
 });
+
+it("reveals function details when zooming into a selected package", () => {
+  const s = createDemoSnapshot(),
+    graph = spatialGraph(s, "functions", null, "pkg:apps", "Explore");
+  expect(
+    graph.nodes.some((n) => n.kind === "function" && n.group === "apps"),
+  ).toBe(true);
+});

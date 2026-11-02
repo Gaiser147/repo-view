@@ -1,3 +1,8 @@
+import { scenePosition } from "../../../packages/core/src/scene-position";
+import {
+  nearestScreenNode,
+  type ScreenNode,
+} from "../../../packages/core/src/picking";
 import {
   spatialGraph,
   zoomLevel,
@@ -16,7 +21,6 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, OrbitControls } from "@react-three/drei";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import * as THREE from "three";
-import { minimatch } from "minimatch";
 import type { Layout, Vec3 } from "../../../packages/core/src/index";
 import { hash, layoutGraph } from "../../../packages/core/src/layout";
 import { useRepo } from "./state";
@@ -69,7 +73,7 @@ function Cloud({ layout }: { layout: Layout }) {
         snapshot.nodes.filter((n) => n.kind === "package").map((n) => n.group),
       [snapshot],
     );
-  const { camera, controls } = useThree(),
+  const { camera, controls, gl, size } = useThree(),
     points = useRef<THREE.Points>(null),
     lines = useRef<THREE.LineSegments>(null),
     labels = useRef<Record<string, THREE.Group | null>>({}),
@@ -167,26 +171,71 @@ function Cloud({ layout }: { layout: Layout }) {
   useEffect(
     () => () => {
       geo.dispose();
-      lineGeo.dispose();
     },
-    [geo, lineGeo],
+    [geo],
   );
   useEffect(() => () => signalGeo.dispose(), [signalGeo]);
+  useEffect(() => () => lineGeo.dispose(), [lineGeo]);
   useEffect(() => {
-    const object = points.current;
-    if (!object) return;
-    object.raycast = function (raycaster, hits) {
-      const all: THREE.Intersection[] = [];
-      THREE.Points.prototype.raycast.call(this, raycaster, all);
-      hits.push(
-        ...all.filter(
-          (h) =>
-            (h.index ?? Infinity) < nodes.length &&
-            !ghostIds.has(nodes[h.index!]?.id),
-        ),
-      );
+    const canvas = gl.domElement,
+      down = new Map<number, { x: number; y: number }>();
+    let multi = false;
+    const start = (event: PointerEvent) => {
+      if (event.target !== canvas || event.button > 0) return;
+      down.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (down.size > 1) multi = true;
     };
-  }, [nodes]);
+    const cancel = (event: PointerEvent) => {
+      down.delete(event.pointerId);
+      if (!down.size) multi = false;
+    };
+    const end = (event: PointerEvent) => {
+      const first = down.get(event.pointerId),
+        wasMulti = multi;
+      cancel(event);
+      if (
+        !first ||
+        wasMulti ||
+        event.target !== canvas ||
+        Math.hypot(event.clientX - first.x, event.clientY - first.y) > 8
+      )
+        return;
+      const rect = canvas.getBoundingClientRect(),
+        p = new THREE.Vector3(),
+        positions = geo.attributes.position.array as Float32Array,
+        alpha = geo.attributes.alpha.array as Float32Array,
+        candidates: ScreenNode[] = [];
+      for (let i = 0; i < nodes.length; i++) {
+        if (ghostIds.has(nodes[i].id) || alpha[i] < 0.1) continue;
+        p.fromArray(positions, i * 3).project(camera);
+        candidates.push({
+          id: nodes[i].id,
+          x: rect.left + ((p.x + 1) * rect.width) / 2,
+          y: rect.top + ((1 - p.y) * rect.height) / 2,
+          z: p.z,
+        });
+      }
+      const id = nearestScreenNode(
+        event.clientX,
+        event.clientY,
+        candidates,
+        event.pointerType === "touch" ? 26 : 16,
+      );
+      useRepo.getState().select(id);
+    };
+    canvas.addEventListener("pointerdown", start);
+    canvas.addEventListener("pointerup", end);
+    canvas.addEventListener("pointercancel", cancel);
+    return () => {
+      canvas.removeEventListener("pointerdown", start);
+      canvas.removeEventListener("pointerup", end);
+      canvas.removeEventListener("pointercancel", cancel);
+    };
+  }, [nodes, geo, gl, camera, ghostIds]);
+  const nodeLabels = useRef<Record<string, THREE.Group | null>>({});
+  const coarse = useMemo(() => matchMedia("(pointer: coarse)").matches, []);
+  const [labelIds, setLabelIds] = useState<string[]>([]),
+    lastLabels = useRef("");
   const colors = useMemo(
     () => groups.map((g) => new THREE.Color(groupColor(g, groups))),
     [groups],
@@ -231,12 +280,70 @@ function Cloud({ layout }: { layout: Layout }) {
           Math.min(dt, 0.05),
         );
     if (!paused && !reducedMotion) clock.current += dt;
-    if (frames.current.count++ % 30 === 0) {
+    frames.current.count++;
+    {
       const target =
         (controls as unknown as { target?: THREE.Vector3 })?.target ??
         new THREE.Vector3();
       const next = zoomLevel(camera.position.distanceTo(target));
-      if (next !== detail) setDetail(next);
+      if (next !== detail) {
+        setDetail(next);
+        useRepo.getState().set({ graphLevel: next });
+      }
+      if (frames.current.count % 8 === 0) {
+        const p = new THREE.Vector3(),
+          positions = geo.attributes.position.array as Float32Array;
+        const labels = nodes
+          .map((n, i) => {
+            p.fromArray(positions, i * 3).project(camera);
+            return {
+              id: n.id,
+              kind: n.kind,
+              x: ((p.x + 1) * size.width) / 2,
+              y: ((1 - p.y) * size.height) / 2,
+              width: Math.min(180, 24 + n.name.length * 7),
+              score: p.x * p.x + p.y * p.y,
+              visible:
+                p.z >= -1 &&
+                p.z <= 1 &&
+                Math.abs(p.x) < 0.85 &&
+                Math.abs(p.y) < (coarse ? 0.62 : 0.72),
+            };
+          })
+          .filter(
+            (n) =>
+              n.visible &&
+              (next === "functions" || n.id === selectedId) &&
+              n.kind !== "package",
+          )
+          .sort(
+            (a, b) =>
+              Number(b.id === selectedId) - Number(a.id === selectedId) ||
+              a.score - b.score,
+          )
+          .reduce(
+            (accepted, candidate) => {
+              if (
+                accepted.length < (coarse ? 5 : 8) &&
+                accepted.every(
+                  (a) =>
+                    Math.abs(a.x - candidate.x) >
+                      (a.width + candidate.width) / 2 + 8 ||
+                    Math.abs(a.y - candidate.y) > (coarse ? 50 : 36),
+                )
+              )
+                accepted.push(candidate);
+              return accepted;
+            },
+            [] as { id: string; x: number; y: number; width: number }[],
+          )
+          .map((n) => n.id);
+        const key = labels.join("|");
+        if (key !== lastLabels.current) {
+          lastLabels.current = key;
+          setLabelIds(labels);
+        }
+      }
     }
     frames.current.time += dt;
     if (frames.current.count === 30 && !lowPower && frames.current.time > 1.4)
@@ -258,27 +365,14 @@ function Cloud({ layout }: { layout: Layout }) {
       morph = transition.current;
     const position = (id: string, group: string): Vec3 => {
       const p = layout[id];
-      if (!p) return [0, 0, 0];
-      let layer = p.layers;
-      const rule = Object.entries(layerRules).find(
-        ([pattern]) =>
-          group === pattern ||
-          minimatch(id.split("#")[0], pattern, { dot: true }),
-      );
-      if (Object.keys(layerRules).length)
-        layer = [
-          layer[0],
-          rule ? (1.5 - Number(rule[1])) * 3.8 : -9.5,
-          layer[2],
-        ];
-      const f = focus === group ? focusT.current * (1 - morph) : 0;
-      return p.cloud.map((v, i) =>
-        THREE.MathUtils.lerp(
-          THREE.MathUtils.lerp(v, p.focus[i], f),
-          layer[i],
-          morph,
-        ),
-      ) as Vec3;
+      return p
+        ? scenePosition(p, id, group, {
+            morph,
+            focus,
+            focusAmount: focusT.current,
+            rules: layerRules,
+          })
+        : [0, 0, 0];
     };
     for (let i = 0; i < nodes.length; i++) {
       const n = nodes[i],
@@ -417,6 +511,10 @@ function Cloud({ layout }: { layout: Layout }) {
     signalGeo.attributes.size.needsUpdate = true;
     lineGeo.attributes.position.needsUpdate = true;
     lineGeo.attributes.color.needsUpdate = true;
+    for (const [id, label] of Object.entries(nodeLabels.current)) {
+      const i = index.get(id);
+      if (label && i !== undefined) label.position.fromArray(pos, i * 3);
+    }
     for (const group of groups) {
       const label = labels.current[group];
       if (!label) continue;
@@ -438,11 +536,7 @@ function Cloud({ layout }: { layout: Layout }) {
         ref={points}
         geometry={geo}
         frustumCulled={false}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (e.index !== undefined && e.index < nodes.length)
-            useRepo.getState().select(nodes[e.index].id);
-        }}
+        userData={{ repoNodes: true, ids: nodes.map((n) => n.id) }}
       >
         <shaderMaterial
           vertexShader={vertex}
@@ -470,6 +564,30 @@ function Cloud({ layout }: { layout: Layout }) {
           blending={THREE.AdditiveBlending}
         />
       </lineSegments>
+      {labelIds.map((id) => {
+        const n = nodes.find((n) => n.id === id);
+        if (!n) return null;
+        return (
+          <group
+            key={id}
+            ref={(element) => {
+              if (element) nodeLabels.current[id] = element;
+              else delete nodeLabels.current[id];
+            }}
+          >
+            <Html center zIndexRange={[3, 0]}>
+              <button
+                className={`node-label ${n.kind} ${selectedId === id ? "selected" : ""}`}
+                onClick={() => useRepo.getState().select(id)}
+                title={n.path}
+              >
+                {n.kind === "function" ? "ƒ " : ""}
+                {n.name}
+              </button>
+            </Html>
+          </group>
+        );
+      })}
       {groups.map((g, i) => (
         <group
           key={g}
@@ -477,7 +595,7 @@ function Cloud({ layout }: { layout: Layout }) {
             labels.current[g] = el;
           }}
         >
-          <Html center zIndexRange={[3, 0]} distanceFactor={27}>
+          <Html center zIndexRange={[3, 0]}>
             <button
               className={`cluster-label ${focus === g ? "focused" : ""}`}
               style={
@@ -505,41 +623,179 @@ function Cloud({ layout }: { layout: Layout }) {
   );
 }
 function Camera({ layout }: { layout: Layout }) {
-  const aim = useRef(new THREE.Vector3()),
-    remaining = useRef(0);
-  const mode = useRepo((s) => s.layout),
-    reduced = useRepo((s) => s.reducedMotion);
   const controls = useRef<any>(null),
-    rev = useRepo((s) => s.cameraRevision),
-    selectedId = useRepo((s) => s.selectedId),
-    focus = useRepo((s) => s.focus),
-    { camera } = useThree();
-  useEffect(() => {
-    if (controls.current) {
-      controls.current.target.set(0, 0, 0);
-      camera.position.set(0, 1, window.innerWidth < 700 ? 36 : 22);
+    remaining = useRef(0),
+    aim = useRef(new THREE.Vector3()),
+    destination = useRef(new THREE.Vector3()),
+    distanceGoal = useRef<number | null>(null),
+    interacted = useRef(false);
+  const { camera, gl, size } = useThree(),
+    {
+      snapshot,
+      layout: mode,
+      selectedId,
+      focus,
+      reducedMotion,
+      cameraRevision,
+      cameraCommand,
+      layerRules,
+    } = useRepo();
+  function move(target: THREE.Vector3, distance: number, front = false) {
+    const offset = front
+      ? new THREE.Vector3(0, 0.04, 1).normalize()
+      : camera.position
+          .clone()
+          .sub(controls.current?.target ?? new THREE.Vector3())
+          .normalize();
+    aim.current.copy(target);
+    destination.current.copy(target).add(offset.multiplyScalar(distance));
+    distanceGoal.current = distance;
+    remaining.current = 1.1;
+    if (reducedMotion && controls.current) {
+      camera.position.copy(destination.current);
+      controls.current.target.copy(aim.current);
       controls.current.update();
+      remaining.current = 0;
     }
-  }, [rev, camera]);
+  }
+  function fit() {
+    if (size.width < 2 || size.height < 2) return;
+    remaining.current = 0;
+    distanceGoal.current = null;
+    const box = new THREE.Box3();
+    for (const n of snapshot.nodes.filter((n) => n.kind === "file")) {
+      const p = layout[n.id];
+      if (p)
+        box.expandByPoint(
+          new THREE.Vector3().fromArray(
+            scenePosition(p, n.id, n.group, {
+              morph: mode === "layers" ? 1 : 0,
+              focus,
+              rules: layerRules,
+            }),
+          ),
+        );
+    }
+    if (box.isEmpty())
+      box.setFromCenterAndSize(
+        new THREE.Vector3(),
+        new THREE.Vector3(14, 10, 8),
+      );
+    const center = box.getCenter(new THREE.Vector3()),
+      extent = box.getSize(new THREE.Vector3()),
+      tan = Math.tan(
+        THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov / 2),
+      ),
+      aspect = size.width / Math.max(1, size.height),
+      distance =
+        Math.max(extent.y / (2 * tan), extent.x / (2 * tan * aspect)) * 1.18 +
+        extent.z / 2 +
+        2;
+    move(center, Math.max(15, distance), true);
+  }
   useEffect(() => {
-    const p = layout[selectedId ?? `pkg:${focus}`];
-    if (p && (selectedId || focus)) {
-      aim.current.fromArray(mode === "layers" ? p.layers : p.cloud);
-      if (reduced && controls.current) {
-        const delta = aim.current.clone().sub(controls.current.target);
-        camera.position.add(delta);
-        controls.current.target.copy(aim.current);
-        controls.current.update();
-        remaining.current = 0;
-      } else remaining.current = 1.4;
+    if (!interacted.current) fit();
+  }, [layout, size.width, size.height, mode, layerRules, focus]);
+  useEffect(() => {
+    interacted.current = false;
+    fit();
+  }, [cameraRevision]);
+  useEffect(() => {
+    const id = selectedId ?? (focus ? `pkg:${focus}` : null),
+      p = id ? layout[id] : undefined;
+    if (!p || !controls.current) return;
+    interacted.current = true;
+    const n = snapshot.nodes.find((n) => n.id === id),
+      target = new THREE.Vector3().fromArray(
+        scenePosition(p, id!, n?.group ?? "", {
+          morph: mode === "layers" ? 1 : 0,
+          focus,
+          rules: layerRules,
+        }),
+      );
+    move(
+      target,
+      n?.kind === "function"
+        ? 5.5
+        : n?.kind === "file"
+          ? 8
+          : Math.max(13, camera.position.distanceTo(controls.current.target)),
+    );
+  }, [selectedId, focus, mode, layout, layerRules]);
+  useEffect(() => {
+    if (!cameraCommand.revision || !controls.current) return;
+    interacted.current = true;
+    remaining.current = 0;
+    if (cameraCommand.action === "fit") {
+      interacted.current = false;
+      fit();
+      return;
     }
-  }, [selectedId, focus, mode, layout, reduced]);
+    if (cameraCommand.action === "locate") {
+      const p = layout[cameraCommand.nodeId ?? ""];
+      if (p)
+        move(
+          new THREE.Vector3().fromArray(
+            scenePosition(
+              p,
+              cameraCommand.nodeId ?? "",
+              snapshot.nodes.find((n) => n.id === cameraCommand.nodeId)
+                ?.group ?? "",
+              { morph: mode === "layers" ? 1 : 0, focus, rules: layerRules },
+            ),
+          ),
+          7,
+        );
+      return;
+    }
+    const distance =
+      distanceGoal.current ??
+      camera.position.distanceTo(controls.current.target);
+    move(
+      controls.current.target.clone(),
+      THREE.MathUtils.clamp(
+        distance * (cameraCommand.action === "in" ? 0.72 : 1.39),
+        2.2,
+        400,
+      ),
+    );
+  }, [cameraCommand]);
+  useEffect(() => {
+    const wheel = (event: WheelEvent) => {
+      if (event.target !== gl.domElement || !controls.current) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      interacted.current = true;
+      const delta = event.deltaY * (event.deltaMode === 1 ? 16 : 1),
+        distance =
+          distanceGoal.current ??
+          camera.position.distanceTo(controls.current.target);
+      move(
+        controls.current.target.clone(),
+        THREE.MathUtils.clamp(
+          distance * Math.exp(THREE.MathUtils.clamp(delta, -400, 400) * 0.0016),
+          2.2,
+          400,
+        ),
+      );
+    };
+    gl.domElement.addEventListener("wheel", wheel, {
+      passive: false,
+      capture: true,
+    });
+    return () => gl.domElement.removeEventListener("wheel", wheel, true);
+  }, [gl, camera, reducedMotion]);
   useFrame((_, dt) => {
     if (remaining.current <= 0 || !controls.current) return;
     remaining.current -= dt;
-    const before = controls.current.target.clone();
-    controls.current.target.lerp(aim.current, 1 - Math.exp(-5 * dt));
-    camera.position.add(controls.current.target.clone().sub(before));
+    const alpha = reducedMotion ? 1 : 1 - Math.exp(-8 * Math.min(dt, 0.1));
+    controls.current.target.lerp(aim.current, alpha);
+    camera.position.lerp(destination.current, alpha);
+    if (remaining.current <= 0) {
+      controls.current.target.copy(aim.current);
+      camera.position.copy(destination.current);
+      distanceGoal.current = null;
+    }
     controls.current.update();
   });
   return (
@@ -547,13 +803,18 @@ function Camera({ layout }: { layout: Layout }) {
       ref={controls}
       onStart={() => {
         remaining.current = 0;
+        distanceGoal.current = null;
+        interacted.current = true;
       }}
       makeDefault
       enableDamping
-      dampingFactor={0.08}
-      minDistance={5}
-      maxDistance={55}
-      maxPolarAngle={Math.PI * 0.9}
+      dampingFactor={0.1}
+      minDistance={2.2}
+      maxDistance={400}
+      enableZoom
+      zoomSpeed={1.4}
+      screenSpacePanning
+      touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }}
     />
   );
 }
@@ -563,11 +824,11 @@ export function Graph() {
       position: [0, 1, window.innerWidth < 700 ? 36 : 22] as Vec3,
       fov: 48,
       near: 0.1,
-      far: 150,
+      far: 1200,
     }),
     [],
   );
-  const { snapshot, lowPower } = useRepo(),
+  const { snapshot, lowPower, view } = useRepo(),
     [layout, setLayout] = useState<Layout>(() => layoutGraph(snapshot.nodes));
   useEffect(() => {
     const worker = new Worker(new URL("./layout.worker.ts", import.meta.url), {
@@ -605,8 +866,19 @@ export function Graph() {
             alpha: true,
             powerPreference: "high-performance",
           }}
-          onPointerMissed={() => useRepo.getState().select(null)}
-          onCreated={({ raycaster, gl }) => {
+          frameloop={view === "Explore" ? "always" : "never"}
+          onCreated={({ raycaster, gl, scene, camera, get }) => {
+            if (import.meta.env.DEV)
+              (
+                window as unknown as { __repoViewGraph: unknown }
+              ).__repoViewGraph = {
+                scene,
+                camera,
+                canvas: gl.domElement,
+                get controls() {
+                  return get().controls;
+                },
+              };
             const context = gl.getContext(),
               extension = context.getExtension("WEBGL_debug_renderer_info");
             if (

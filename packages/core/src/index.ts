@@ -1,5 +1,6 @@
 import { z } from "zod";
 export const analysisRequest = z.object({
+  priority: z.enum(["foreground", "background"]).optional(),
   repository: z.string().min(3).max(300),
   ref: z
     .string()
@@ -82,6 +83,7 @@ export interface HealthReport {
   coverage: number;
 }
 export interface RepoSnapshot {
+  analyzedAt?: string;
   repository: string;
   sha: string;
   nodes: CodeNode[];

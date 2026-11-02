@@ -427,6 +427,7 @@ export function analyzeFiles(
   }
   return {
     repository,
+    analyzedAt: new Date().toISOString(),
     sha,
     nodes,
     edges,
