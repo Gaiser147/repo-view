@@ -1,0 +1,8 @@
+{
+  "name": "@repo-view/server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --env-file-if-exists=../../.env --use-env-proxy --import tsx src/index.ts"
+  }
+}

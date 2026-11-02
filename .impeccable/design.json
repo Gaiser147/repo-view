@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-02T12:07:13.034036+00:00",
+  "title": "Design System: repo-view",
+  "extensions": {
+    "typographyMeta": {
+      "body": {
+        "displayName": "Interface",
+        "purpose": "Self-hosted Inter Variable for the instrument frame."
+      },
+      "code": {
+        "displayName": "Technical metadata",
+        "purpose": "Self-hosted JetBrains Mono for code, paths, shortcuts, and measurements."
+      }
+    },
+    "shadows": [
+      {
+        "name": "morph-control",
+        "value": "0 6px 24px #0003",
+        "purpose": "Floating graph layout control."
+      },
+      {
+        "name": "search-results",
+        "value": "0 12px 40px #000a",
+        "purpose": "Search result overlay."
+      },
+      {
+        "name": "settings",
+        "value": "0 14px 40px #0009",
+        "purpose": "Floating settings panel."
+      }
+    ],
+    "motion": [
+      {
+        "name": "morph",
+        "value": "damp(5.1); dt <= 0.05s; settle < 0.0005",
+        "purpose": "Reversible Cloud/Layers interpolation, approximately 1.5s to settle; immediate with Reduced Motion."
+      },
+      {
+        "name": "local-focus",
+        "value": "damp(4)",
+        "purpose": "Unfold one group while preserving surrounding positions."
+      },
+      {
+        "name": "control-background",
+        "value": "0.2s",
+        "purpose": "Morph control background transition."
+      },
+      {
+        "name": "reduced-motion-css",
+        "value": "0.001ms",
+        "purpose": "CSS transition and animation duration under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide",
+        "value": "min-width: 1650px"
+      },
+      {
+        "name": "compact-desktop",
+        "value": "max-width: 1250px"
+      },
+      {
+        "name": "inspector-overlay",
+        "value": "max-width: 1000px"
+      },
+      {
+        "name": "mobile",
+        "value": "max-width: 700px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Compact blue action surface.",
+      "html": "<button class=\"ds-primary\">Apply layer assignments</button>",
+      "css": ".ds-primary{font:11px \"Inter Variable\",sans-serif;color:#d7e2f0;background:#183e57;border:1px solid #346786;border-radius:5px;padding:10px 14px;cursor:pointer}.ds-primary:hover{background:#20516f;color:#fff}.ds-primary:focus-visible{outline:2px solid var(--cyan,#57c6ff);outline-offset:4px}.ds-primary:disabled{opacity:.35;cursor:not-allowed}"
+    },
+    {
+      "name": "Icon button",
+      "kind": "button",
+      "refersTo": "icon-button",
+      "description": "Compact graph and panel action.",
+      "html": "<button class=\"ds-icon\" aria-label=\"Reset camera\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path d=\"M3 11a9 9 0 1 1 2.6 7M3 4v7h7\"/></svg></button>",
+      "css": ".ds-icon{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:4px;color:#8ea3bb;background:none;cursor:pointer}.ds-icon:hover{background:#142437;color:#7bcfff}.ds-icon:focus-visible{outline:2px solid var(--cyan,#57c6ff);outline-offset:4px}"
+    },
+    {
+      "name": "Repository field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Dark field for repository input and settings.",
+      "html": "<input class=\"ds-field\" aria-label=\"Repository URL\" placeholder=\"https://github.com/owner/repository\">",
+      "css": ".ds-field{font:13px \"Inter Variable\",sans-serif;color:#dce8f7;background:#0c1623;border:1px solid #293d52;border-radius:5px;padding:9px 11px;caret-color:var(--cyan,#57c6ff)}.ds-field::placeholder{color:var(--muted,#8a9bb1)}.ds-field:focus-visible{outline:2px solid var(--cyan,#57c6ff);outline-offset:4px}"
+    },
+    {
+      "name": "Primary navigation",
+      "kind": "nav",
+      "description": "Compact tabs with a cyan active underline.",
+      "html": "<nav class=\"ds-nav\"><button class=\"ds-active\" aria-current=\"page\">Explore</button><button>Dependencies</button></nav>",
+      "css": ".ds-nav{display:flex;background:#090f19;height:63px;gap:9px}.ds-nav button{font:11px \"Inter Variable\",sans-serif;color:#92a4b9;border:0;background:none;padding:0 12px;position:relative;cursor:pointer}.ds-nav button:hover{color:#fff}.ds-nav .ds-active{color:#75caff}.ds-nav .ds-active:after{content:\"\";position:absolute;bottom:0;left:8px;right:8px;height:2px;background:#5ac3ff;box-shadow:0 -3px 15px #3293d277}.ds-nav button:focus-visible{outline:2px solid var(--cyan,#57c6ff);outline-offset:4px}"
+    },
+    {
+      "name": "Morph control",
+      "kind": "custom",
+      "description": "Cloud and Layers targets for one persistent graph.",
+      "html": "<div class=\"ds-morph\"><button class=\"ds-active\" aria-pressed=\"true\">Cloud</button><span></span><button aria-pressed=\"false\">Layers</button></div>",
+      "css": ".ds-morph{display:inline-flex;align-items:center;padding:4px;border:1px solid #29435d;border-radius:7px;background:#0a1422e6;box-shadow:0 6px 24px #0003}.ds-morph button{font:10px \"Inter Variable\",sans-serif;padding:7px 12px;border:0;border-radius:4px;background:none;color:#8fa8c2;transition:background .2s;cursor:pointer}.ds-morph button:hover{color:#fff}.ds-morph .ds-active{background:#163b58;color:#8ed6ff;box-shadow:inset 0 0 0 1px #306b95}.ds-morph span{width:18px;height:1px;background:#2c5878}.ds-morph button:focus-visible{outline:2px solid var(--cyan,#57c6ff);outline-offset:4px}@media(prefers-reduced-motion:reduce){.ds-morph button{transition-duration:.001ms}}"
+    },
+    {
+      "name": "Demo label",
+      "kind": "chip",
+      "description": "Explicit non-interactive demo data marker.",
+      "html": "<span class=\"ds-demo\">DEMO</span>",
+      "css": ".ds-demo{display:inline-block;color:#72b8e5;background:#0d2437;border:1px solid #23455e;border-radius:4px;font:500 8px \"JetBrains Mono\",monospace;letter-spacing:.06em;padding:3px 6px;white-space:nowrap}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Morph with local Lens focus",
+    "overview": "The approved identity is **Morph with local Lens focus**, drawing on Flux's luminous cloud and commit timeline. A dark, dense instrument frame supports immersive spatial exploration. One persistent graph moves between organic Cloud and ordered Layers; the local focus opens one group while preserving its surroundings.\n\nThe graph supplies atmosphere and depth. Interface text, paths, measurements, and controls stay sharp. Repository state, selection, and evidence take priority over decorative effects.",
+    "keyCharacteristics": [
+      "Luminous point cores and additive halos within a nearly black blue workspace.",
+      "Compact, precise controls and restrained panel surfaces.",
+      "Stable node identities across layout changes, with local context retained.",
+      "Explicit status, coverage, unavailable-data, and demo labels."
+    ],
+    "rules": [
+      {
+        "name": "The Evidence Rule",
+        "body": "Demo, missing, limited, loading, and error states remain explicit. A visual transition must never imply that repository data changed.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "**Do** preserve the approved Morph identity and a single continuous graph.",
+      "**Do** retain selection and context when changing spatial order.",
+      "**Do** pair semantic colors with labels or symbols and keep legends tied to the active mode.",
+      "**Do** keep demo, missing data, partial coverage, and errors explicit.",
+      "**Do** preserve keyboard access, Reduced Motion, low-power rendering, and the Files/Inspector fallback."
+    ],
+    "donts": [
+      "**Don't** add ambient camera rotation or apply graph bloom to text.",
+      "**Don't** invent architectural layer classifications or hide unmatched files.",
+      "**Don't** substitute demo data for failed real analysis without an explicit user action.",
+      "**Don't** treat atmospheric specks as repository entities or display them as data counts."
+    ]
+  }
+}

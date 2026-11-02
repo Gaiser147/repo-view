@@ -1,0 +1,250 @@
+import { useEffect, useState } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Pause,
+  GitCommitHorizontal,
+  ArrowRight,
+  Check,
+  Minus,
+  X,
+  ExternalLink,
+  LoaderCircle,
+  History,
+} from "lucide-react";
+import type { Commit } from "../../../packages/core/src/index";
+import { hash } from "../../../packages/core/src/layout";
+import { useRepo, loadCommit, loadOlderCommits } from "./state";
+export function Timeline() {
+  const { snapshot, commits, playing, pending, branch, diff, set } = useRepo(),
+    [olderLoading, setOlderLoading] = useState(false),
+    [hover, setHover] = useState<Commit | null>(null);
+  const chronological = [...commits].reverse(),
+    index = chronological.findIndex((c) => c.sha === snapshot.sha),
+    commit = chronological[index];
+  useEffect(() => {
+    if (!playing || pending) return;
+    const timer = setTimeout(() => {
+      if (index >= chronological.length - 1) {
+        set({ playing: false });
+        return;
+      }
+      void loadCommit(chronological[index + 1].sha);
+    }, 1400);
+    return () => clearTimeout(timer);
+  }, [playing, pending, index, snapshot.sha]);
+  const step = (dir: number) => {
+    const next = chronological[index + dir];
+    if (next) void loadCommit(next.sha);
+  };
+  async function older() {
+    setOlderLoading(true);
+    try {
+      await loadOlderCommits();
+    } finally {
+      setOlderLoading(false);
+    }
+  }
+  return (
+    <section className="history-panel" aria-label="Commit history">
+      <div className="history-heading">
+        <div>
+          <History size={14} />
+          <strong>Commit history</strong>
+          <span className="subtle">{commits.length} commits</span>
+          {snapshot.demo && <span className="demo-tag">DEMO</span>}
+        </div>
+        <div className="commit-caption">
+          <code data-testid="commit-sha">{snapshot.sha.slice(0, 7)}</code>
+          <span>
+            {commit?.message ??
+              (snapshot.sha === "empty"
+                ? "Empty repository"
+                : "Selected snapshot")}
+          </span>
+          <span className="subtle">{commit?.author}</span>
+        </div>
+        <div className="history-nav">
+          {!snapshot.demo && (
+            <button
+              className="text-link"
+              disabled={olderLoading}
+              onClick={older}
+            >
+              {olderLoading ? "Loading…" : "Load older"}
+            </button>
+          )}
+          <button
+            className="icon-button"
+            aria-label="Previous commit"
+            disabled={index <= 0 || pending}
+            onClick={() => step(-1)}
+          >
+            <ChevronLeft size={15} />
+          </button>
+          <button
+            className="icon-button"
+            aria-label="Next commit"
+            disabled={index < 0 || index >= chronological.length - 1 || pending}
+            onClick={() => step(1)}
+          >
+            <ChevronRight size={15} />
+          </button>
+        </div>
+      </div>
+      <div className="timeline-track">
+        <button
+          className={`play-button ${playing ? "active" : ""}`}
+          aria-label={playing ? "Pause history" : "Play history"}
+          disabled={!commits.length || pending}
+          onClick={() => {
+            if (index === chronological.length - 1 && chronological.length)
+              void loadCommit(chronological[0].sha);
+            set({ playing: !playing });
+          }}
+        >
+          {pending ? (
+            <LoaderCircle size={17} className="spin" />
+          ) : playing ? (
+            <Pause size={17} />
+          ) : (
+            <Play size={17} />
+          )}
+        </button>
+        <div className="commit-track">
+          <div className="track-line" />
+          {chronological.map((c, i) => (
+            <button
+              key={c.sha}
+              className={`commit-tick ${index === i ? "current" : ""} ${i > index ? "future" : ""}`}
+              aria-label={`Commit ${c.sha.slice(0, 7)}: ${c.message}`}
+              aria-pressed={index === i}
+              title={`${new Date(c.date).toLocaleDateString("en-GB")} · ${c.message}`}
+              onClick={() => {
+                set({ playing: false });
+                void loadCommit(c.sha);
+              }}
+              onMouseEnter={() => setHover(c)}
+              onMouseLeave={() => setHover(null)}
+              style={
+                {
+                  "--tick-height": `${8 + (hash(c.sha) % 27)}px`,
+                } as React.CSSProperties
+              }
+            >
+              <i />
+              <b />
+            </button>
+          ))}
+          {hover && (
+            <div className="commit-tooltip">
+              <code>{hover.sha.slice(0, 7)}</code>
+              <span>{hover.message}</span>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="timeline-dates">
+        <span>
+          {chronological[0] &&
+            new Date(chronological[0].date).toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+            })}
+        </span>
+        <span className="diff-summary">
+          {diff ? (
+            <>
+              <em>+{diff.added.length}</em> added <span>·</span>{" "}
+              {diff.changed.length} changed <span>·</span> {diff.removed.length}{" "}
+              removed
+              {diff.renamed.length > 0 && ` · ${diff.renamed.length} renamed`}
+            </>
+          ) : (
+            "Select a commit to explore its snapshot"
+          )}
+        </span>
+        <span>
+          {chronological.at(-1) &&
+            new Date(chronological.at(-1)!.date).toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+            })}
+        </span>
+      </div>
+    </section>
+  );
+}
+export function PipelineStrip() {
+  const { snapshot, set } = useRepo(),
+    jobs = snapshot.pipeline.jobs;
+  return (
+    <section className="pipeline-strip" aria-label="CI pipeline">
+      <button
+        className="pipeline-title"
+        onClick={() => set({ view: "Pipelines" })}
+      >
+        <GitCommitHorizontal size={16} />
+        <span>
+          CI pipeline
+          <small>
+            {snapshot.demo ? "Illustrative run" : "At selected commit"}
+          </small>
+        </span>
+      </button>
+      <div className="pipeline-stages">
+        {jobs.length ? (
+          jobs.slice(0, 7).map((j, i) => (
+            <div key={j.id} className="stage-wrap">
+              {i > 0 && <ArrowRight size={14} className="stage-arrow" />}
+              <button
+                className={`stage ${j.status}`}
+                onClick={() => set({ view: "Pipelines" })}
+              >
+                <span className="stage-icon">
+                  {j.status === "success" ? (
+                    <Check size={12} />
+                  ) : j.status === "failure" ? (
+                    <X size={12} />
+                  ) : (
+                    <Minus size={12} />
+                  )}
+                </span>
+                <span>
+                  {j.name}
+                  <small>
+                    {j.status === "unavailable" ? "No run" : j.status}
+                  </small>
+                </span>
+              </button>
+            </div>
+          ))
+        ) : (
+          <span className="muted small">
+            No workflow available at this commit
+          </span>
+        )}
+      </div>
+      {snapshot.pipeline.runUrl ? (
+        <a
+          className="pipeline-more"
+          href={snapshot.pipeline.runUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          View run
+          <ExternalLink size={12} />
+        </a>
+      ) : (
+        <button
+          className="pipeline-more"
+          onClick={() => set({ view: "Pipelines" })}
+        >
+          View workflow
+          <ArrowRight size={13} />
+        </button>
+      )}
+    </section>
+  );
+}
