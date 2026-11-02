@@ -1,3 +1,4 @@
+import { BranchSwitcher, GroupVisibility } from "./ExplorationControls";
 import { AnalysisWorkspace } from "./Workspaces";
 import { lazy, Suspense, useEffect, useMemo, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -12,7 +13,6 @@ import {
   Command,
   Cuboid,
   Focus,
-  GitBranch,
   GitFork as Github,
   Layers3,
   ListTree,
@@ -281,10 +281,7 @@ export function App() {
           <ChevronDown size={13} />
         </button>
         {snapshot.demo && <span className="demo-tag">DEMO DATA</span>}
-        <div className="branch-indicator">
-          <GitBranch size={13} />
-          {state.branch}
-        </div>
+        <BranchSwitcher />
         <div className="search-wrap">
           <Search size={14} />
           <input
@@ -561,6 +558,7 @@ export function App() {
           </button>
         </div>
         <div className="workspace-mode-actions">
+          {state.view === "Explore" && <GroupVisibility />}
           {state.view === "Explore" && (
             <button
               className="expand-button"
@@ -607,7 +605,7 @@ export function App() {
               <button
                 aria-pressed={layout === "layers"}
                 className={layout === "layers" ? "active" : ""}
-                onClick={() => set({ layout: "layers", focus: null })}
+                onClick={() => set({ layout: "layers" })}
               >
                 <Layers3 size={15} />
                 Layers

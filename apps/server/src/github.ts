@@ -3,6 +3,10 @@ import { Worker } from "node:worker_threads";
 import { killCommand } from "./process";
 import { fileURLToPath } from "node:url";
 export interface RepositoryProvider {
+  branches?(
+    repository: string,
+    page: number,
+  ): Promise<{ branches: string[]; hasMore: boolean }>;
   defaultBranch?(repository: string): Promise<string>;
   shutdown?(): void;
   commits(repository: string, ref?: string, page?: number): Promise<Commit[]>;
@@ -36,6 +40,15 @@ export async function github<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 export const provider: RepositoryProvider = {
+  async branches(repository, page) {
+    const branches = await github<{ name: string }[]>(
+      `repos/${repository}/branches?per_page=100&page=${page}`,
+    );
+    return {
+      branches: branches.map((b) => b.name),
+      hasMore: branches.length === 100,
+    };
+  },
   async defaultBranch(repository) {
     const meta = await github<any>(`repos/${repository}`);
     if (meta.private)

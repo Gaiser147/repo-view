@@ -127,7 +127,7 @@ Spacing remains precise, with larger labels and touch targets supporting a simpl
 
 ## Elevation & Depth
 
-Panel depth comes primarily from dark tonal layering and fine borders. Floating controls, search results, settings, and mobile panels use soft black shadows. Search results use `0 12px 36px #0008`; settings use `0 14px 38px #0008`; cluster labels use `0 7px 18px #0004`. The Morph control relies on its border and active inset stroke rather than a floating shadow. Small graph indicators may glow, but text remains crisp.
+Panel depth comes primarily from dark tonal layering and fine borders. Floating controls, search results, settings, and mobile panels use soft black shadows. Search results use `0 12px 36px #0008`; settings use `0 14px 38px #0008`; graph annotations use a small text shadow and translucent fill without a box shadow. The Morph control relies on its border and active inset stroke rather than a floating shadow. Small graph indicators may glow, but text remains crisp.
 
 The graph uses point cores, additive halos, non-interactive atmospheric specks, and bloom. Bloom belongs to spatial geometry. There is no ambient camera rotation. Low-power mode removes bloom, reduces atmospheric specks from 2600 to 600, and fixes pixel ratio at 1 instead of the normal 1–1.6 range. Software renderers are detected where renderer information is available; a slow initial frame sample also enables low-power mode. If WebGL cannot start, an explicit fallback directs users to Files and Inspector.
 
@@ -143,9 +143,9 @@ Primary buttons use the blue surface, border, hover, radius, and padding tokens 
 
 ### Camera controls and selection
 
-Zoom in, Zoom out, and Fit cloud are explicit graph controls with +, −, and 0 keyboard shortcuts. Wheel, pinch, orbit, and pan gestures remain available. Fit computes the visible graph bounds against viewport aspect ratio. Camera moves preserve the intended target, settle over 1.1 seconds, and become immediate under Reduced Motion. Selection approaches files and functions closely enough to reveal detail; interaction interrupts camera motion.
+Zoom in, Zoom out, and Fit cloud are explicit graph controls with +, −, and 0 keyboard shortcuts. Wheel, pinch, orbit, and pan gestures remain available. Fit computes visible graph bounds against viewport aspect ratio. Layers uses an elevated camera and a sphere bound so depth remains visible; group focus frames the group’s files rather than its left-edge heading. Camera moves preserve the intended target, settle over 1.1 seconds, and become immediate under Reduced Motion. Selection approaches files and functions closely enough to reveal detail; interaction interrupts camera motion.
 
-Point selection uses projected screen positions with a 16px mouse or 26px touch radius, excluding removed ghosts and invisible points. A drag beyond eight pixels or a multi-touch gesture does not select a node. Nearby named labels provide a second route to file and function selection. Search and analysis rows use the same locate action to return to the cloud and select the referenced entity.
+Point selection uses projected screen positions with a 16px mouse or 26px touch radius, excluding removed ghosts and invisible points. A drag beyond eight pixels or a multi-touch gesture does not select a node. Nearby named labels provide a second route to file and function selection. Annotations use compact 10px text in translucent 22px-high surfaces; close-up group headings recede unless focused or selected. One collision pool prioritizes selection and prevents group/detail labels from covering each other. These small annotations have point-picking and Files/search alternatives on touch devices. Search and analysis rows use the same locate action to return to the cloud and select the referenced entity.
 
 ### Analysis workspaces
 
@@ -155,19 +155,23 @@ Dependencies provides filterable file-import relationships and external packages
 
 ### Morph and local focus
 
-Cloud and Layers are two targets for the same graph, with attached edge endpoints and stable selection. The implemented transition uses reversible exponential damping (5.1, capped frame delta 0.05s, settling threshold 0.0005), settling in approximately 1.5 seconds under normal frame timing. It is not a fixed-duration timeline. Focus unfolds only the selected group; other groups retain their cloud positions and dim to 24% tint. Focus damping is 4. A second focus toggle or Escape closes focus. Entering global Layers clears local focus while retaining selection.
+Cloud and Layers are two targets for the same graph, with attached edge endpoints and stable selection. The implemented transition uses reversible exponential damping (5.1, capped frame delta 0.05s, settling threshold 0.0005), settling in approximately 1.5 seconds under normal frame timing. It is not a fixed-duration timeline. Focus unfolds only the selected group; other groups retain their cloud positions and dim to 24% tint. Focus damping is 4. A second focus toggle or Escape closes focus. Layers retains group focus and visibility. The Groups menu can hide individual groups or isolate one group in either layout; restoring all groups clears isolation. Focus and selection reveal their target group. If a branch/commit removes the focused group, focus and isolation clear.
 
 Default Layers assigns a unique vertical slot to every sorted top-level group, with 2.6 graph units between slots. Optional explicit group or glob path rules map to four configured layer indices (0–3); the first matching rule wins, and unmatched files stay visible in an Unassigned lane. Layer assignments describe configured paths, not inferred architecture.
 
 ### Semantic graph detail and legends
 
-Camera distance reveals packages above 40 graph units, files between 17 and 40, and eligible functions below 17. Graph function detail follows the focused group or selected file; the Functions workspace provides a separate searchable definition list. Package-level relationships aggregate by group; detail edges are filtered by context and capped with visible omitted-edge copy. Node area can use LOC or bytes; color modes show their own meaning in a legend.
+Camera distance aggregates relationships at package level above 40 graph units while retaining file points as the cloud silhouette, shows file relationships between 17 and 40, and reveals eligible functions below 17. Graph function detail follows the focused group or selected file; the Functions workspace provides a separate searchable definition list. Package-level relationships aggregate by group; detail edges are filtered by context and capped with visible omitted-edge copy. Node area can use LOC or bytes; color modes show their own meaning in a legend.
 
 Selection and focused relationships can carry moving signal particles. Reduced Motion switches layouts and camera targets directly and removes decorative signal motion and commit animation; CSS transitions and animations collapse to 0.001ms. Animation pause freezes the decorative clock. Neither option changes the repository snapshot. Files, search, and Inspector provide access without relying solely on 3D pointing.
 
+### Branches
+
+The branch name is a direct switcher with search, 100-entry pagination, manual branch entry, and loading/error/retry states. Successful branch changes atomically replace the snapshot and history. Mobile keeps branch selection on the first repository-toolbar row and search on the second.
+
 ### History and CI
 
-The hideable history selects static commit snapshots, preserves available identities, and briefly distinguishes added, removed, and changed files. Playback waits for loaded data. CI uses labeled job status and relationships with details in the Inspector. Missing runs and unsupported information remain visibly unavailable; no success is invented. Cached snapshots and idle warming speed repeat commit visits without changing the visual meaning of a commit. Loading retains the current snapshot until its replacement is ready; cache status stays secondary to the selected snapshot.
+The hideable history selects static commit snapshots, preserves available identities, and briefly distinguishes added, removed, and changed files. Playback waits for loaded data. CI uses labeled job status and relationships with details in the Inspector. Missing runs and unsupported information remain visibly unavailable; no success is invented. Cached snapshots and idle warming speed repeat commit visits without changing the visual meaning of a commit. Loading retains the current snapshot until its replacement is ready; cache status stays secondary to the selected snapshot. A shared browser API queue reuses mutable metadata for two minutes, reserves 20 requests from background warming, retains cooldown/reset data across reloads, and exposes remaining requests/reset time beside history. Pinned history analysis omits metadata/ref resolution and live CI lookups; pipeline structure and an explicit warning remain available. The browser snapshot cache version changes with this analysis behavior.
 
 ## Do's and Don'ts
 

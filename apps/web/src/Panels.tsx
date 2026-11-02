@@ -61,7 +61,7 @@ function Branch({ tree, level = 0 }: { tree: Tree; level?: number }) {
   );
 }
 export function Files() {
-  const { snapshot, filesOpen, focus, layout, set } = useRepo();
+  const { snapshot, filesOpen, focus, set } = useRepo();
   const groups = snapshot.nodes.filter((n) => n.kind === "package");
   const trees = useMemo(() => {
     const root: Tree = { name: "root", path: "", children: new Map() };
@@ -119,14 +119,9 @@ export function Files() {
             </button>
             <button
               className={`icon-button ${focus === p.group ? "active" : ""}`}
-              title={
-                layout === "layers"
-                  ? "Switch to Cloud to unfold locally"
-                  : "Unfold this group"
-              }
-              disabled={layout === "layers"}
+              title="Focus this group"
               aria-label={`Focus ${p.group}`}
-              onClick={() => set({ focus: focus === p.group ? null : p.group })}
+              onClick={() => useRepo.getState().focusGroup(p.group)}
             >
               <Focus size={14} />
             </button>

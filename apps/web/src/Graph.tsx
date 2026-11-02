@@ -26,7 +26,7 @@ import { hash, layoutGraph } from "../../../packages/core/src/layout";
 import { useRepo } from "./state";
 
 import { palette, groupColor } from "./colors";
-const vertex = `attribute float size; attribute float alpha; attribute vec3 tint; varying vec3 vTint; varying float vAlpha; void main(){ vTint=tint; vAlpha=alpha; vec4 mv=modelViewMatrix*vec4(position,1.); gl_PointSize=clamp(size*230./-mv.z,1.,48.); gl_Position=projectionMatrix*mv; }`;
+const vertex = `attribute float size; attribute float alpha; attribute vec3 tint; varying vec3 vTint; varying float vAlpha; void main(){ vTint=tint; vAlpha=alpha; vec4 mv=modelViewMatrix*vec4(position,1.); gl_PointSize=clamp(size*230./-mv.z,1.5,48.); gl_Position=projectionMatrix*mv; }`;
 const fragment = `varying vec3 vTint; varying float vAlpha; void main(){ float d=length(gl_PointCoord-vec2(.5))*2.; if(d>1.)discard; float core=exp(-d*d*32.);float glow=pow(1.-d,2.)*.32;gl_FragColor=vec4(vTint*(1.+core*1.5),(core+glow)*vAlpha); }`;
 class GraphBoundary extends Component<
   { children: ReactNode },
@@ -59,6 +59,8 @@ function Cloud({ layout }: { layout: Layout }) {
       previousSnapshot,
       selectedId,
       focus,
+      hiddenGroups,
+      isolateFocus,
       view,
       color,
       metric,
@@ -82,6 +84,19 @@ function Cloud({ layout }: { layout: Layout }) {
     clock = useRef(0),
     frames = useRef({ time: 0, count: 0 }),
     dirty = useRef(true);
+  const hidden = useMemo(
+    () =>
+      new Set([
+        ...hiddenGroups,
+        ...(isolateFocus && focus ? groups.filter((g) => g !== focus) : []),
+      ]),
+    [hiddenGroups, isolateFocus, focus, groups],
+  );
+  const dustNodes = useMemo(
+    () =>
+      snapshot.nodes.filter((n) => n.kind === "file" && !hidden.has(n.group)),
+    [snapshot, hidden],
+  );
   const selected = snapshot.nodes.find((n) => n.id === selectedId),
     [detail, setDetail] = useState<DetailLevel>("files");
   const ghostIds = useMemo(
@@ -93,8 +108,8 @@ function Cloud({ layout }: { layout: Layout }) {
     ghostStart.current = performance.now();
   }, [snapshot]);
   const spatial = useMemo(
-    () => spatialGraph(snapshot, detail, focus, selectedId, view),
-    [snapshot, detail, focus, selectedId, view],
+    () => spatialGraph(snapshot, detail, focus, selectedId, view, [...hidden]),
+    [snapshot, detail, focus, selectedId, view, hidden],
   );
   const nodes = useMemo(
     () => [
@@ -102,10 +117,11 @@ function Cloud({ layout }: { layout: Layout }) {
       ...(detail === "packages"
         ? []
         : (previousSnapshot?.nodes.filter(
-            (n) => n.kind === "file" && ghostIds.has(n.id),
+            (n) =>
+              n.kind === "file" && ghostIds.has(n.id) && !hidden.has(n.group),
           ) ?? [])),
     ],
-    [spatial, previousSnapshot, ghostIds, detail],
+    [spatial, previousSnapshot, ghostIds, detail, hidden],
   );
   const index = useMemo(() => new Map(nodes.map((n, i) => [n.id, i])), [nodes]);
   const links = spatial.edges;
@@ -234,6 +250,8 @@ function Cloud({ layout }: { layout: Layout }) {
   }, [nodes, geo, gl, camera, ghostIds]);
   const nodeLabels = useRef<Record<string, THREE.Group | null>>({});
   const coarse = useMemo(() => matchMedia("(pointer: coarse)").matches, []);
+  const [packageLabels, setPackageLabels] = useState<string[]>([]),
+    lastPackageLabels = useRef("");
   const [labelIds, setLabelIds] = useState<string[]>([]),
     lastLabels = useRef("");
   const colors = useMemo(
@@ -260,6 +278,8 @@ function Cloud({ layout }: { layout: Layout }) {
     changedPaths,
     mode,
     reducedMotion,
+    labelIds,
+    packageLabels,
   ]);
   useFrame((_, dt) => {
     const target = useRepo.getState().layout === "layers" ? 1 : 0,
@@ -293,55 +313,87 @@ function Cloud({ layout }: { layout: Layout }) {
       if (frames.current.count % 8 === 0) {
         const p = new THREE.Vector3(),
           positions = geo.attributes.position.array as Float32Array;
-        const labels = nodes
-          .map((n, i) => {
-            p.fromArray(positions, i * 3).project(camera);
+        const headingCandidates = groups
+          .filter(
+            (g) =>
+              !hidden.has(g) &&
+              (next !== "functions" ||
+                g === focus ||
+                selectedId === `pkg:${g}`),
+          )
+          .map((g) => {
+            const label = labels.current[g];
+            if (label) p.copy(label.position).project(camera);
+            else p.set(9, 9, 9);
             return {
-              id: n.id,
-              kind: n.kind,
+              id: `pkg:${g}`,
               x: ((p.x + 1) * size.width) / 2,
               y: ((1 - p.y) * size.height) / 2,
-              width: Math.min(180, 24 + n.name.length * 7),
-              score: p.x * p.x + p.y * p.y,
+              width: Math.min(120, 22 + g.length * 6),
+              height: 24,
+              score: g === focus || selectedId === `pkg:${g}` ? -2 : 1,
               visible:
                 p.z >= -1 &&
                 p.z <= 1 &&
-                Math.abs(p.x) < 0.85 &&
-                Math.abs(p.y) < (coarse ? 0.62 : 0.72),
+                Math.abs(p.x) < 0.88 &&
+                Math.abs(p.y) < 0.75,
             };
-          })
-          .filter(
-            (n) =>
-              n.visible &&
+          });
+        const detailCandidates = nodes.map((n, i) => {
+          p.fromArray(positions, i * 3).project(camera);
+          return {
+            id: n.id,
+            x: ((p.x + 1) * size.width) / 2,
+            y: ((1 - p.y) * size.height) / 2,
+            width: Math.min(136, 16 + n.name.length * 6),
+            height: 22,
+            score: n.id === selectedId ? -3 : p.x * p.x + p.y * p.y,
+            visible:
+              n.kind !== "package" &&
               (next === "functions" || n.id === selectedId) &&
-              n.kind !== "package",
+              p.z >= -1 &&
+              p.z <= 1 &&
+              Math.abs(p.x) < 0.85 &&
+              Math.abs(p.y) < (coarse ? 0.62 : 0.72),
+          };
+        });
+        const accepted: {
+          id: string;
+          x: number;
+          y: number;
+          width: number;
+          height: number;
+        }[] = [];
+        for (const candidate of [...headingCandidates, ...detailCandidates]
+          .filter((n) => n.visible)
+          .sort((a, b) => a.score - b.score)) {
+          if (accepted.length >= (coarse ? 5 : 7)) break;
+          if (
+            accepted.every(
+              (a) =>
+                Math.abs(a.x - candidate.x) >
+                  (a.width + candidate.width) / 2 + 12 ||
+                Math.abs(a.y - candidate.y) >
+                  (a.height + candidate.height) / 2 + 10,
+            )
           )
-          .sort(
-            (a, b) =>
-              Number(b.id === selectedId) - Number(a.id === selectedId) ||
-              a.score - b.score,
-          )
-          .reduce(
-            (accepted, candidate) => {
-              if (
-                accepted.length < (coarse ? 5 : 8) &&
-                accepted.every(
-                  (a) =>
-                    Math.abs(a.x - candidate.x) >
-                      (a.width + candidate.width) / 2 + 8 ||
-                    Math.abs(a.y - candidate.y) > (coarse ? 50 : 36),
-                )
-              )
-                accepted.push(candidate);
-              return accepted;
-            },
-            [] as { id: string; x: number; y: number; width: number }[],
-          )
+            accepted.push(candidate);
+        }
+        const visibleLabels = accepted
+          .filter((n) => !n.id.startsWith("pkg:"))
           .map((n) => n.id);
-        const key = labels.join("|");
+        const packages = accepted
+            .filter((n) => n.id.startsWith("pkg:"))
+            .map((n) => n.id.slice(4)),
+          packageKey = packages.join("|");
+        if (packageKey !== lastPackageLabels.current) {
+          lastPackageLabels.current = packageKey;
+          setPackageLabels(packages);
+        }
+        const key = visibleLabels.join("|");
         if (key !== lastLabels.current) {
           lastLabels.current = key;
-          setLabelIds(labels);
+          setLabelIds(visibleLabels);
         }
       }
     }
@@ -410,12 +462,18 @@ function Cloud({ layout }: { layout: Layout }) {
         active ? [0.45, 1, 0.83] : [c.r * dim, c.g * dim, c.b * dim],
         i * 3,
       );
-      sizes[i] = active
-        ? 1.8 + Math.sin(clock.current * 3) * 0.12
-        : n.kind === "function"
-          ? 0.35
-          : 0.48 +
-            Math.min(1.1, Math.sqrt(n[metric]) / (metric === "loc" ? 22 : 145));
+      sizes[i] =
+        n.kind === "package"
+          ? 7
+          : active
+            ? 1.8 + Math.sin(clock.current * 3) * 0.12
+            : n.kind === "function"
+              ? 0.35
+              : 0.48 +
+                Math.min(
+                  1.1,
+                  Math.sqrt(n[metric]) / (metric === "loc" ? 22 : 145),
+                );
     }
     if (!reducedMotion && performance.now() - ghostStart.current < 1700) {
       const age = (performance.now() - ghostStart.current) / 1700;
@@ -425,7 +483,7 @@ function Cloud({ layout }: { layout: Layout }) {
     }
     // Atmospheric specks are a non-interactive material, not additional repository entities.
     for (let d = 0; d < dustCount; d++) {
-      const base = nodes[d % Math.max(1, nodes.length)],
+      const base = dustNodes[d % Math.max(1, dustNodes.length)],
         i = nodes.length + d;
       if (!base) {
         pos.set([0, 0, 0], i * 3);
@@ -444,7 +502,9 @@ function Cloud({ layout }: { layout: Layout }) {
         ],
         i * 3,
       );
-      const c = colors[Math.max(0, groups.indexOf(base.group)) % colors.length];
+      const c =
+        colors[Math.max(0, groups.indexOf(base.group)) % colors.length] ??
+        new THREE.Color("#45bfff");
       const haze = d % 60 === 0;
       alphas[i] = haze ? 0.18 : 0.65;
       tints.set(
@@ -588,37 +648,46 @@ function Cloud({ layout }: { layout: Layout }) {
           </group>
         );
       })}
-      {groups.map((g, i) => (
-        <group
-          key={g}
-          ref={(el) => {
-            labels.current[g] = el;
-          }}
-        >
-          <Html center zIndexRange={[3, 0]}>
-            <button
-              className={`cluster-label ${focus === g ? "focused" : ""}`}
-              style={
-                {
-                  "--cluster": palette[i % palette.length],
-                } as React.CSSProperties
-              }
-              onClick={() => useRepo.getState().select(`pkg:${g}`)}
+      {groups
+        .filter((g) => !hidden.has(g))
+        .map((g) => (
+          <group
+            key={g}
+            ref={(el) => {
+              labels.current[g] = el;
+            }}
+          >
+            <Html
+              center
+              zIndexRange={[3, 0]}
+              style={{
+                visibility: packageLabels.includes(g) ? "visible" : "hidden",
+              }}
             >
-              <span className="cluster-dot" />
-              {g}
-              <small>
-                {
-                  snapshot.nodes.filter(
-                    (n) => n.kind === "file" && n.group === g,
-                  ).length
-                }{" "}
-                files
-              </small>
-            </button>
-          </Html>
-        </group>
-      ))}
+              <button
+                className={`cluster-label ${focus === g ? "focused" : ""}`}
+                style={
+                  {
+                    "--cluster": palette[groups.indexOf(g) % palette.length],
+                  } as React.CSSProperties
+                }
+                title={`${g} · ${snapshot.nodes.filter((n) => n.kind === "file" && n.group === g).length} files`}
+                onClick={() => useRepo.getState().select(`pkg:${g}`)}
+              >
+                <span className="cluster-dot" />
+                {g}
+                <small>
+                  {
+                    snapshot.nodes.filter(
+                      (n) => n.kind === "file" && n.group === g,
+                    ).length
+                  }{" "}
+                  files
+                </small>
+              </button>
+            </Html>
+          </group>
+        ))}
     </>
   );
 }
@@ -639,10 +708,12 @@ function Camera({ layout }: { layout: Layout }) {
       cameraRevision,
       cameraCommand,
       layerRules,
+      hiddenGroups,
+      isolateFocus,
     } = useRepo();
   function move(target: THREE.Vector3, distance: number, front = false) {
     const offset = front
-      ? new THREE.Vector3(0, 0.04, 1).normalize()
+      ? new THREE.Vector3(0, mode === "layers" ? 0.8 : 0.04, 1).normalize()
       : camera.position
           .clone()
           .sub(controls.current?.target ?? new THREE.Vector3())
@@ -658,12 +729,18 @@ function Camera({ layout }: { layout: Layout }) {
       remaining.current = 0;
     }
   }
-  function fit() {
+  function fit(group?: string) {
     if (size.width < 2 || size.height < 2) return;
     remaining.current = 0;
     distanceGoal.current = null;
     const box = new THREE.Box3();
-    for (const n of snapshot.nodes.filter((n) => n.kind === "file")) {
+    for (const n of snapshot.nodes.filter(
+      (n) =>
+        n.kind === "file" &&
+        (!group || n.group === group) &&
+        !hiddenGroups.includes(n.group) &&
+        (!isolateFocus || !focus || n.group === focus),
+    )) {
       const p = layout[n.id];
       if (p)
         box.expandByPoint(
@@ -691,11 +768,31 @@ function Camera({ layout }: { layout: Layout }) {
         Math.max(extent.y / (2 * tan), extent.x / (2 * tan * aspect)) * 1.18 +
         extent.z / 2 +
         2;
-    move(center, Math.max(15, distance), true);
+    const layerDistance =
+      (box.getBoundingSphere(new THREE.Sphere()).radius /
+        Math.sin(Math.atan(Math.min(tan, tan * aspect)))) *
+      1.2;
+    move(
+      center,
+      Math.max(15, mode === "layers" ? layerDistance : distance),
+      true,
+    );
   }
+  const previousMode = useRef(mode);
   useEffect(() => {
-    if (!interacted.current) fit();
-  }, [layout, size.width, size.height, mode, layerRules, focus]);
+    const changedMode = previousMode.current !== mode;
+    previousMode.current = mode;
+    if (changedMode || !interacted.current) fit();
+  }, [
+    layout,
+    size.width,
+    size.height,
+    mode,
+    layerRules,
+    focus,
+    hiddenGroups,
+    isolateFocus,
+  ]);
   useEffect(() => {
     interacted.current = false;
     fit();
@@ -713,6 +810,10 @@ function Camera({ layout }: { layout: Layout }) {
           rules: layerRules,
         }),
       );
+    if (n?.kind === "package" && mode === "layers") {
+      fit(n.group);
+      return;
+    }
     move(
       target,
       n?.kind === "function"

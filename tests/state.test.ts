@@ -153,3 +153,21 @@ it("reselecting the displayed commit cancels a different pending transition", as
   expect(useRepo.getState().snapshot.sha).toBe(a.sha);
   expect(useRepo.getState().pending).toBe(false);
 });
+
+it("clears an isolated focus when the next branch no longer contains that group", () => {
+  const snapshot = createDemoSnapshot();
+  useRepo.getState().set({ focus: "apps", isolateFocus: true });
+  useRepo.getState().replace({
+    ...snapshot,
+    nodes: snapshot.nodes.filter((n) => n.group !== "apps"),
+  });
+  expect(useRepo.getState().focus).toBeNull();
+  expect(useRepo.getState().isolateFocus).toBe(false);
+});
+
+it("reveals a hidden group when focusing it from the Files panel", () => {
+  useRepo.getState().set({ hiddenGroups: ["apps"], focus: null });
+  useRepo.getState().focusGroup("apps");
+  expect(useRepo.getState().focus).toBe("apps");
+  expect(useRepo.getState().hiddenGroups).not.toContain("apps");
+});

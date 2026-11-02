@@ -15,11 +15,6 @@
     },
     "shadows": [
       {
-        "name": "cluster-label",
-        "value": "0 7px 18px #0004",
-        "purpose": "Readable labels above spatial content."
-      },
-      {
         "name": "search-results",
         "value": "0 12px 36px #0008",
         "purpose": "Search result overlay."
@@ -73,7 +68,15 @@
         "name": "compact-height",
         "value": "max-height: 650px"
       }
-    ]
+    ],
+    "spatialAnnotations": {
+      "fontSize": "10px",
+      "minHeight": "22px",
+      "maxWidth": "136px",
+      "background": "#0815228c",
+      "collisionPool": "shared package/detail labels; selected nodes first",
+      "touchAlternative": "26px point-picking radius plus Files/search"
+    }
   },
   "components": [
     {

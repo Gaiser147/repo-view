@@ -110,3 +110,18 @@ it("rejects private repositories and explains public API limits", async () => {
     ),
   ).rejects.toThrow(/limit/i);
 });
+
+it("loads a pinned history commit with only one tree API request", async () => {
+  const fetcher = fixture();
+  await analyzePublicRepository(
+    "example/project",
+    sha,
+    () => {},
+    fetcher as typeof fetch,
+  );
+  const apiCalls = fetcher.mock.calls
+    .map(([u]) => String(u))
+    .filter((u) => u.startsWith("https://api.github.com/"));
+  expect(apiCalls).toHaveLength(1);
+  expect(apiCalls[0]).toContain("/git/trees/");
+});

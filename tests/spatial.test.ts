@@ -14,7 +14,7 @@ it("assigns every default group its own layer", () => {
 it("aggregates files and connections into packages at a distance", () => {
   const s = createDemoSnapshot(),
     graph = spatialGraph(s, "packages", null, null, "Explore");
-  expect(graph.nodes.every((n) => n.kind === "package")).toBe(true);
+  expect(graph.nodes.some((n) => n.kind === "package")).toBe(true);
   expect(
     graph.edges.every(
       (e) => e.source.startsWith("pkg:") && e.target.startsWith("pkg:"),
@@ -49,4 +49,23 @@ it("reveals function details when zooming into a selected package", () => {
   expect(
     graph.nodes.some((n) => n.kind === "function" && n.group === "apps"),
   ).toBe(true);
+});
+
+it("retains the file silhouette when zooming out and excludes hidden groups and links", () => {
+  const snapshot = createDemoSnapshot();
+  const wide = spatialGraph(snapshot, "packages", null, null, "Explore");
+  expect(wide.nodes.filter((n) => n.kind === "file")).toHaveLength(
+    snapshot.nodes.filter((n) => n.kind === "file").length,
+  );
+  const graph = spatialGraph(snapshot, "functions", null, null, "Explore", [
+    "apps",
+    "tests",
+  ]);
+  expect(graph.nodes.some((n) => ["apps", "tests"].includes(n.group))).toBe(
+    false,
+  );
+  const ids = new Set(graph.nodes.map((n) => n.id));
+  expect(graph.edges.every((e) => ids.has(e.source) && ids.has(e.target))).toBe(
+    true,
+  );
 });
