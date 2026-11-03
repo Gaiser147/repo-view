@@ -114,5 +114,7 @@ export interface NodePosition {
   cloud: Vec3;
   layers: Vec3;
   focus: Vec3;
+  /** Position on the 2D floor plan (z = 0). */
+  plan?: Vec3;
 }
 export type Layout = Record<string, NodePosition>;

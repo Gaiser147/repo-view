@@ -323,7 +323,8 @@ Sheets and controls have the slightly eased corner of a cut sheet (3px). Marks i
 
 ### Navigation
 
-- **Lens bar:** a Files toggle, then six lens tabs (Architecture, Hotspots, Dependencies, Evolution, Pipelines, Authors), each a name in Title over its question in 12.5px `ink-3`, divided by `rule` hairlines. The active lens fills chrome yellow. Cloud/Layers sits at the right as a segmented control.
+- **Lens bar:** a Files toggle, then seven lens tabs (Architecture, Hotspots, Dependencies, Impact, Evolution, Pipelines, Authors), each a name in Title over its question in 12.5px `ink-3`, divided by `rule` hairlines. The active lens fills chrome yellow; keys 1–7 switch lenses. Cloud / Layers / Plan sits at the right as a segmented control.
+- **Breadcrumbs:** Back and Forward (30px icon buttons on `sheet`, also `[` and `]`) followed by the mono path of the selection (repository › group › folders › file › ƒ function) on a hairline sheet, top of the drawing beside the lens card. Group and file crumbs are buttons; folders are plain text. On phones the bar moves above the detail indicator and drops folder crumbs.
 - **Top bar:** brand mark, repository and branch pills, demo tag, the centred ⌘K field, health, Export, Share, theme and settings.
 
 ### Lens card
@@ -334,9 +335,17 @@ The question of the active lens as its heading, a scope line in condensed capita
 
 The spine draws the LOC line in ink over commit ticks spaced by real time. Large commits (top 15% by changed files) carry a red revision triangle; the current commit is a 4px chrome-yellow bar (Whiteprint uses the selection gold #b87a00), the compare base a 4px ink bar. Dragging across ticks draws a chrome-yellow compare band and compares on release; the tooltip reads "Release to compare with …". The title block at the right is a ruled grid of cells (Sheet message, Revision `A → B`, Drawn by, Date, No. n / N · branch), each a condensed label over a value.
 
+### Floor plan (graph)
+
+The third layout target. Groups, folders and files become nested rooms of a squarified treemap sized by lines of code, drawn flat in the XY plane as hairline frames (groups in ink, folders in `line`, files fainter) that fade in with the plan. Files sit at the centre of their room, functions on a small grid inside it, group labels at their room's top-left corner, and the largest first-level folders carry condensed-capital labels. Edges recede to a fifth of their weight unless selected or reached. The camera frames the plan straight on. Same nodes, same identities: the plan is a morph target, never a separate view.
+
+### Impact lens (graph)
+
+What depends on the selection, hop by hop, over resolved imports and calls only; a dependent function lifts its file to the same hop, and containment is never climbed. The selection and its contents take the selection ink, hop 1 correction red, hop 2 ink, hop 3+ `line`; unreached marks fade toward the ground and lose their paper fill. Reached edges draw in correction red at 70%. The lens card shows a depth slider (1–6 hops), per-hop bars, the direct dependents, and a lower-bound note naming unresolved imports and whether the walk stopped at its depth. Without a selection it offers the most-imported files.
+
 ### Revision marks (graph)
 
-In Evolution, changed files tint correction red and take a revision cloud; additions tint mint and fade in; removed files stay as dashed outlines with no paper fill. When more than 40% of files changed, clouds go only to the most-revised fifth so the mark still picks something out. The three most-revised changed files carry a Δ tag with "rev n" on their node label; the full changed list carries Δ rev tags in the lens card. Node labels are mono on `sheet` with a `rule-strong` hairline; cluster labels are condensed capitals with a stroked group dot and a file count.
+In Evolution, changed files tint correction red and take a revision cloud; additions tint mint and fade in; removed files stay as dashed outlines with no paper fill. When more than 40% of files changed, clouds go only to the most-revised fifth so the mark still picks something out. The three most-revised changed files carry a Δ tag with "rev n" on their node label; the full changed list carries Δ rev tags in the lens card. The list filters by All / Changed / Added / Renamed / Removed (chrome-yellow active chip with counts), shows twelve rows and grows by forty, and each row flies to its file; removed rows are plain text with a dashed mark. "Dim unchanged files" fades every unchanged mark and edge so only the difference stays drawn. Node labels are mono on `sheet` with a `rule-strong` hairline; cluster labels are condensed capitals with a stroked group dot and a file count.
 
 ### Hover card
 

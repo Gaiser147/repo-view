@@ -33,6 +33,7 @@ import {
   stopWarmup,
   refreshHistory,
   diffWithParent,
+  recordNavigation,
   lenses,
   store,
 } from "./state";
@@ -43,6 +44,7 @@ import { CommandPalette, type PaletteAction } from "./CommandPalette";
 import { StartScreen, rememberRepository } from "./StartScreen";
 import { Hints } from "./Hints";
 import { HoverCard } from "./HoverCard";
+import { Breadcrumbs } from "./Breadcrumbs";
 import { readUrl, shareUrl, writeUrl } from "./url-state";
 import { exportPng } from "./export-png";
 import { inks } from "./colors";
@@ -138,6 +140,15 @@ export function App() {
         clearTimeout(timer);
         timer = setTimeout(writeUrl, 250);
       }
+      if (
+        s.selectedId !== p.selectedId ||
+        s.focus !== p.focus ||
+        s.lens !== p.lens
+      )
+        recordNavigation(
+          { selectedId: p.selectedId, focus: p.focus, lens: p.lens },
+          { selectedId: s.selectedId, focus: s.focus, lens: s.lens },
+        );
       if (s.snapshot.repository !== p.snapshot.repository && !s.snapshot.demo)
         rememberRepository(s.snapshot.repository);
     });
@@ -178,8 +189,10 @@ export function App() {
         useRepo.getState().requestCamera("out");
       } else if (e.key === "0") useRepo.getState().requestCamera("fit");
       else if (e.key.toLowerCase() === "f") void fullscreen();
-      else if (/^[1-6]$/.test(e.key))
+      else if (/^[1-9]$/.test(e.key) && Number(e.key) <= lenses.length)
         useRepo.getState().setLens(lenses[Number(e.key) - 1].id);
+      else if (e.key === "[") useRepo.getState().navigate(-1);
+      else if (e.key === "]") useRepo.getState().navigate(1);
     };
     window.addEventListener("keydown", handler);
     const media = matchMedia("(prefers-reduced-motion: reduce)"),
@@ -219,6 +232,18 @@ export function App() {
       id: "layers",
       label: "Layers layout",
       run: () => set({ layout: "layers" }),
+    },
+    {
+      id: "plan",
+      label: "Floor plan layout",
+      run: () => set({ layout: "plan" }),
+    },
+    { id: "back", label: "Back", hint: "[", run: () => state.navigate(-1) },
+    {
+      id: "forward",
+      label: "Forward",
+      hint: "]",
+      run: () => state.navigate(1),
     },
     {
       id: "fit",
@@ -506,6 +531,7 @@ export function App() {
               <Graph />
             </Suspense>
           </div>
+          <Breadcrumbs />
           <LensCard />
           <HoverCard />
           {snapshot.nodes.every((n) => n.kind !== "file") && (

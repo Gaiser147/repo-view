@@ -131,7 +131,11 @@ export async function exportPng() {
         s.snapshot.repository + (s.snapshot.demo ? " (demo)" : ""),
         1,
       ],
-      ["Lens", `${lens} · ${s.layout === "layers" ? "Layers" : "Cloud"}`, 0.8],
+      [
+        "Lens",
+        `${lens} · ${{ cloud: "Cloud", layers: "Layers", plan: "Plan" }[s.layout]}`,
+        0.8,
+      ],
       ["Legend", legend, 1.8],
       [
         "Revision",

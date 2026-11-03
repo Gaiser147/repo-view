@@ -23,6 +23,7 @@ export type Lens =
   | "architecture"
   | "hotspots"
   | "dependencies"
+  | "impact"
   | "evolution"
   | "pipelines"
   | "authors";
@@ -32,7 +33,8 @@ export type ColorMode =
   | "language"
   | "changes"
   | "hotspots"
-  | "authors";
+  | "authors"
+  | "impact";
 export const lenses: { id: Lens; name: string; question: string }[] = [
   {
     id: "architecture",
@@ -45,6 +47,7 @@ export const lenses: { id: Lens; name: string; question: string }[] = [
     name: "Dependencies",
     question: "What relies on what?",
   },
+  { id: "impact", name: "Impact", question: "What breaks if it changes?" },
   { id: "evolution", name: "Evolution", question: "What changed, when?" },
   { id: "pipelines", name: "Pipelines", question: "How does it ship?" },
   { id: "authors", name: "Authors", question: "Who works where?" },
@@ -54,7 +57,14 @@ const lensColor: Partial<Record<Lens, ColorMode>> = {
   evolution: "changes",
   authors: "authors",
   dependencies: "module",
+  impact: "impact",
 };
+/** One step of exploration that Back and Forward can return to. */
+export interface NavEntry {
+  selectedId: string | null;
+  focus: string | null;
+  lens: Lens;
+}
 export type CameraAction = "in" | "out" | "fit" | "locate";
 interface PanelState {
   filesOpen: boolean;
@@ -70,7 +80,7 @@ interface State extends PanelState {
   focus: string | null;
   hiddenGroups: string[];
   isolateFocus: boolean;
-  layout: "cloud" | "layers";
+  layout: "cloud" | "layers" | "plan";
   view: View;
   color: ColorMode;
   lens: Lens;
@@ -82,6 +92,10 @@ interface State extends PanelState {
   historyRepository: string;
   started: boolean;
   toast: string | null;
+  impactDepth: number;
+  dimUnchanged: boolean;
+  navBack: NavEntry[];
+  navForward: NavEntry[];
   metric: "loc" | "bytes";
   paused: boolean;
   lowPower: boolean;
@@ -116,6 +130,7 @@ interface State extends PanelState {
   locate: (id: string) => void;
   focusGroup: (group: string) => void;
   setLens: (lens: Lens) => void;
+  navigate: (direction: -1 | 1) => void;
 }
 function stored(key: string) {
   try {
@@ -140,6 +155,19 @@ const initialTheme: Theme =
     matchMedia("(prefers-color-scheme: light)").matches)
     ? "whiteprint"
     : "cyanotype";
+let navigating = false;
+/** Records each change of selection, focus or lens so Back and Forward can retrace it. */
+export function recordNavigation(previous: NavEntry, next: NavEntry) {
+  if (navigating) return;
+  if (
+    previous.selectedId === next.selectedId &&
+    previous.focus === next.focus &&
+    previous.lens === next.lens
+  )
+    return;
+  const s = useRepo.getState();
+  s.set({ navBack: [...s.navBack, previous].slice(-50), navForward: [] });
+}
 const narrow = () => typeof innerWidth !== "undefined" && innerWidth < 1200;
 const initial = createDemoSnapshot(49),
   memory = new SnapshotMemory(),
@@ -172,6 +200,10 @@ export const useRepo = create<State>((set, get) => ({
     (typeof location !== "undefined" &&
       new URLSearchParams(location.search).has("repo")),
   toast: null,
+  impactDepth: 3,
+  dimUnchanged: false,
+  navBack: [],
+  navForward: [],
   metric: "loc",
   paused: false,
   lowPower: false,
@@ -202,6 +234,32 @@ export const useRepo = create<State>((set, get) => ({
   prefetchEnabled: !saveData,
   snapshotSource: "analysis",
   set: (patch) => set(patch),
+  navigate: (direction) => {
+    const s = get(),
+      from = direction < 0 ? s.navBack : s.navForward,
+      entry = from.at(-1);
+    if (!entry) return;
+    const here: NavEntry = {
+      selectedId: s.selectedId,
+      focus: s.focus,
+      lens: s.lens,
+    };
+    navigating = true;
+    set(
+      direction < 0
+        ? { navBack: from.slice(0, -1), navForward: [...s.navForward, here] }
+        : { navForward: from.slice(0, -1), navBack: [...s.navBack, here] },
+    );
+    if (entry.lens !== s.lens) get().setLens(entry.lens);
+    set({ focus: entry.focus });
+    get().select(
+      entry.selectedId &&
+        get().snapshot.nodes.some((n) => n.id === entry.selectedId)
+        ? entry.selectedId
+        : null,
+    );
+    navigating = false;
+  },
   setLens: (lens) => {
     const current = get();
     if (lens === "pipelines") {
