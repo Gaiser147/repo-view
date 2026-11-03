@@ -1,191 +1,382 @@
 ---
 name: repo-view
-description: A luminous spatial instrument for exploring repository structure and change.
+description: Blueprints of public repositories; one drawing, every commit a revision.
 colors:
-  background: "#060b14"
-  panel: "#0a111b"
-  separator: "#203247"
-  text: "#d7e2f0"
-  muted: "#9aadc2"
-  action: "#68caff"
-  selection: "#77e4c6"
-  finding: "#edc27f"
-  error: "#ffb0b7"
-  field: "#0c1826"
-  field-border: "#34506a"
-  field-text: "#e1ecf6"
-  button: "#16405b"
-  button-border: "#3e789e"
-  button-hover: "#205575"
-  button-text: "#e0f3ff"
-  module-cyan: "#46bcff"
-  module-teal: "#6ee7e0"
-  module-blue: "#4f7dff"
-  module-lilac: "#b29cff"
-  module-amber: "#f2b86f"
-  module-slate: "#80a3ce"
+  ground: "#0f3157"
+  ground-deep: "#0b2747"
+  sheet: "#0d2c4f"
+  sheet-raise: "#13406e"
+  field: "#0b2747"
+  rule: "rgba(238, 245, 255, 0.17)"
+  rule-strong: "rgba(238, 245, 255, 0.34)"
+  grid: "rgba(238, 245, 255, 0.05)"
+  grid-major: "rgba(238, 245, 255, 0.085)"
+  scrim: "rgba(7, 26, 48, 0.72)"
+  ink: "#eef5ff"
+  ink-2: "#c2d6ec"
+  ink-3: "#93b3d6"
+  graph-line: "#a9c3df"
+  graph-muted: "#6f93bb"
+  chrome-yellow: "#ffd45c"
+  chrome-yellow-hover: "#ffe08a"
+  chrome-yellow-soft: "rgba(255, 212, 92, 0.14)"
+  act-ink: "#10263f"
+  correction-red: "#ff8a75"
+  addition-mint: "#8ff0c8"
+  group-sky: "#9fe3ff"
+  group-lilac: "#c9b6ff"
+  group-sand: "#e9d8a6"
+  group-salmon: "#ffb59e"
+  group-periwinkle: "#9db4ff"
+  wp-ground: "#edf1f5"
+  wp-ground-deep: "#e1e8ef"
+  wp-sheet: "#f8fafc"
+  wp-sheet-raise: "#ffffff"
+  wp-rule: "rgba(18, 48, 90, 0.16)"
+  wp-rule-strong: "rgba(18, 48, 90, 0.34)"
+  wp-grid: "rgba(18, 48, 90, 0.055)"
+  wp-grid-major: "rgba(18, 48, 90, 0.095)"
+  wp-scrim: "rgba(237, 241, 245, 0.8)"
+  wp-ink: "#12305a"
+  wp-ink-2: "#304f78"
+  wp-ink-3: "#52708f"
+  wp-graph-line: "#4f6a8a"
+  wp-graph-muted: "#93a8c0"
+  wp-chrome-yellow-hover: "#ffca2e"
+  wp-chrome-yellow-soft: "rgba(255, 196, 30, 0.22)"
+  wp-select-ink: "#b87a00"
+  wp-correction-red: "#c8402a"
+  wp-addition-green: "#0d7a58"
+  wp-group-blue: "#1d6fb8"
+  wp-group-violet: "#6b4fb0"
+  wp-group-ochre: "#8a6a1f"
+  wp-group-rust: "#a4452f"
+  wp-group-slate: "#3f5f8f"
 typography:
-  body:
-    fontFamily: '"Inter Variable", sans-serif'
-    fontSize: "13px"
+  display:
+    fontFamily: "Barlow, Helvetica Neue, Arial, sans-serif"
+    fontSize: "clamp(28px, 4vw, 40px)"
+    fontWeight: 600
+    lineHeight: 1.1
+    letterSpacing: "-0.02em"
   headline:
-    fontFamily: '"Inter Variable", sans-serif'
-    fontSize: "20px"
-    fontWeight: 550
-    lineHeight: 1.35
-    letterSpacing: "-0.03em"
+    fontFamily: "Barlow, Helvetica Neue, Arial, sans-serif"
+    fontSize: "22px"
+    fontWeight: 600
+    letterSpacing: "-0.01em"
+  title-lg:
+    fontFamily: "Barlow, Helvetica Neue, Arial, sans-serif"
+    fontSize: "19px"
+    fontWeight: 600
   title:
-    fontFamily: '"Inter Variable", sans-serif'
-    fontSize: "18px"
-    fontWeight: 500
-    letterSpacing: "-0.035em"
+    fontFamily: "Barlow, Helvetica Neue, Arial, sans-serif"
+    fontSize: "15px"
+    fontWeight: 600
+  lead:
+    fontFamily: "Barlow, Helvetica Neue, Arial, sans-serif"
+    fontSize: "15px"
+    fontWeight: 400
+    lineHeight: 1.45
+  body:
+    fontFamily: "Barlow, Helvetica Neue, Arial, sans-serif"
+    fontSize: "14px"
+    fontWeight: 400
+    lineHeight: 1.4
+  body-sm:
+    fontFamily: "Barlow, Helvetica Neue, Arial, sans-serif"
+    fontSize: "12.5px"
+    fontWeight: 400
   label:
-    fontFamily: '"Inter Variable", sans-serif'
+    fontFamily: "Barlow Condensed, Arial Narrow, Barlow, sans-serif"
+    fontSize: "11.5px"
+    fontWeight: 600
+    letterSpacing: "0.09em"
+  mono:
+    fontFamily: "JetBrains Mono, ui-monospace, Menlo, monospace"
     fontSize: "12px"
-  code:
-    fontFamily: '"JetBrains Mono", monospace'
-    fontSize: "11px"
+    fontWeight: 400
+  figure:
+    fontFamily: "JetBrains Mono, ui-monospace, Menlo, monospace"
+    fontSize: "19px"
+    fontWeight: 400
+    fontFeature: "tnum"
 rounded:
-  compact: "4px"
-  control: "6px"
-  floating: "8px"
+  sheet: "3px"
+  mark: "2px"
+  dot: "50%"
 spacing:
-  compact: "4px"
-  control-gap: "8px"
-  panel: "20px"
-  workspace: "22px"
+  hair: "2px"
+  gap: "8px"
+  inset: "14px"
+  panel: "16px"
+  grid-minor: "24px"
+  grid-major: "120px"
 components:
   button-primary:
-    backgroundColor: "{colors.button}"
-    textColor: "{colors.button-text}"
-    rounded: "{rounded.control}"
-    padding: "10px 15px"
-    height: "40px"
+    backgroundColor: "{colors.chrome-yellow}"
+    textColor: "{colors.act-ink}"
+    rounded: "{rounded.sheet}"
+    padding: "0 16px"
+    height: "38px"
   button-primary-hover:
-    backgroundColor: "{colors.button-hover}"
+    backgroundColor: "{colors.chrome-yellow-hover}"
+  button-secondary:
+    textColor: "{colors.ink}"
+    rounded: "{rounded.sheet}"
+    padding: "0 11px"
+    height: "34px"
+  icon-button:
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.sheet}"
+    width: "34px"
+    height: "34px"
+  icon-button-active:
+    backgroundColor: "{colors.chrome-yellow}"
+    textColor: "{colors.act-ink}"
+  segmented-choice-active:
+    backgroundColor: "{colors.chrome-yellow}"
+    textColor: "{colors.act-ink}"
+    rounded: "{rounded.mark}"
+    padding: "0 11px"
+    height: "28px"
+  lens-tab:
+    textColor: "{colors.ink-3}"
+    typography: "{typography.title}"
+    padding: "0 18px"
+    height: "56px"
+  lens-tab-active:
+    backgroundColor: "{colors.chrome-yellow}"
+    textColor: "{colors.act-ink}"
   input:
     backgroundColor: "{colors.field}"
-    textColor: "{colors.field-text}"
-    rounded: "{rounded.control}"
-    padding: "10px 12px"
-  icon-button:
-    rounded: "{rounded.control}"
-    width: "36px"
-    height: "36px"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.sheet}"
+    padding: "8px 10px"
+  demo-tag:
+    textColor: "{colors.ink}"
+    typography: "{typography.label}"
+    rounded: "{rounded.mark}"
+    padding: "2px 6px"
+  lens-card:
+    backgroundColor: "{colors.sheet}"
+    rounded: "{rounded.sheet}"
+    padding: "12px 14px 14px"
+    width: "330px"
+  inspector:
+    backgroundColor: "{colors.sheet}"
+    rounded: "{rounded.sheet}"
+    padding: "14px 16px 18px"
+    width: "340px"
+  hover-card:
+    backgroundColor: "{colors.sheet}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.sheet}"
+    padding: "8px 11px"
+  node-label:
+    backgroundColor: "{colors.sheet}"
+    textColor: "{colors.ink}"
+    typography: "{typography.mono}"
+    rounded: "{rounded.mark}"
+    padding: "3px 7px"
+  title-block-cell:
+    textColor: "{colors.ink}"
+    padding: "6px 14px"
 ---
 
 # Design System: repo-view
 
 ## Overview
 
-The approved identity is **Morph with local Lens focus**, drawing on Flux's luminous cloud and commit timeline. A dark, dense instrument frame supports immersive spatial exploration. One persistent graph moves between organic Cloud and ordered Layers; the local focus opens one group while preserving its surroundings.
+**Creative North Star: "The Cyanotype Plan Sheet"**
 
-The graph supplies atmosphere and depth. Interface text, paths, measurements, and controls stay sharp. Repository state, selection, and evidence take priority over decorative effects.
+A repository is a set of plans and every commit is a revision. The explorer is one drawing with a title block, not an instrument panel: white linework on Prussian blue (Cyanotype, the default dark print) or navy ink on cool paper (Whiteprint, the light diazo print). Files are drafting marks, a stroked circle with a centre dot on a paper-filled disc. Change is drawn the way a drafter calls out a revision: a scalloped revision cloud, a Δ tag, a revision triangle on the time spine, and a title block naming the revision on the sheet.
+
+The sheet is dense and quiet. Hairline 1px rules divide it; nothing floats on shadow. Colour is ink, not light: there is no glow, bloom or halo. Two hues carry meaning beyond ink. Chrome yellow marks only what can be pressed or what is currently chosen. Correction red marks change and risk; mint marks additions. Everything else is the print's own ink at three strengths.
+
+The product's Evidence Rule binds the drawing: demo data is labelled wherever it appears, missing or partial history is stated in words, and a visual transition never implies that repository data changed. One persistent graph morphs between Cloud and Layers with stable node identity, and lenses re-ink that same graph rather than replacing it.
 
 **Key Characteristics:**
 
-- Luminous point cores and additive halos within a nearly black blue workspace.
-- Compact, precise controls and restrained panel surfaces.
-- Stable node identities across layout changes, with local context retained.
-- Explicit status, coverage, unavailable-data, and demo labels.
+- Prussian-blue or cool-paper ground; one drafting grid, behind the graph only.
+- Hairline rules and 3px corners; zero shadows.
+- Chrome yellow reserved for actionable and chosen elements.
+- Correction red for change and risk; mint for additions.
+- Barlow for the UI, Barlow Condensed tracked uppercase for title-block labels, JetBrains Mono for paths, hashes and figures.
+- Revision clouds, dashed removed files, Δ rev tags and a title block as the signature.
 
 ## Colors
 
-The frontmatter records implemented values from `apps/web/src/styles.css` and `apps/web/src/colors.ts`.
+Two print processes share one role map: Cyanotype tokens carry bare names, Whiteprint tokens carry the `wp-` prefix and swap in through `:root[data-theme="whiteprint"]`. Chrome yellow (`chrome-yellow`) and its dark text (`act-ink`) are identical in both prints.
 
 ### Primary
 
-Cyan identifies actions, focus outlines, and active controls. Mint identifies selection and success. Graph selection uses a brighter shader tint; bloom can change the apparent brightness of graph colors.
+- **Chrome Yellow** (`chrome-yellow`): primary buttons, the active lens tab, the active Cloud/Layers choice, active icon buttons, the playing play button, the current commit tick, the compare band on the time spine, the selected node-label underline, the focused cluster label, the active Inspector tab underline, and the dark-print focus ring. Its hover is `chrome-yellow-hover` (Whiteprint: `wp-chrome-yellow-hover`); its tint `chrome-yellow-soft` fills selected rows and the compare band.
+- **Select Ink, Whiteprint** (`wp-select-ink`): the selection mark inside the WebGL drawing on paper, where flat chrome yellow strokes would vanish.
 
 ### Secondary
 
-Amber marks findings and coverage notes; coral marks errors and failed pipeline states. Status always carries text or a symbol alongside color. The six module colors are a categorical graph palette, repeated in group order; they do not imply quality or architectural responsibility.
+- **Correction Red** (`correction-red`, Whiteprint `wp-correction-red`): changed files in Evolution, hotspot and complexity peaks, revision clouds, Δ tags, revision triangles on large commits, failing pipeline jobs (dashed), invalid fields, the error banner border, low API allowance, coverage notes.
+- **Addition Mint** (`addition-mint`, Whiteprint `wp-addition-green`): added files, "new" rows, successful pipeline status.
+
+### Tertiary
+
+- **Group Inks** (`group-sky`, `group-lilac`, `group-sand`, `group-salmon`, `group-periwinkle` and their `wp-group-*` counterparts): categorical inks for groups, languages and the top six authors, in rank order. They name identity, never quality. Authors beyond six fall back to `graph-muted`.
 
 ### Neutral
 
-The background, panel, separator, text, and muted tokens define the instrument frame. Fields and primary buttons use the darker blue surface variants recorded above. The graph workspace adds a radial gradient (`ellipse at 48% 48%, #0a244066 0%, #060d18 68%`).
+- **Prussian Ground** (`ground`): the sheet behind the graph and analysis workspaces. `ground-deep` carries the top bar, lens bar and time spine; `sheet` carries floating cards, popovers and the Files drawer; `sheet-raise` carries tips; `field` carries inputs and the ⌘K field.
+- **Linework Ink** (`ink`, `ink-2`, `ink-3`): primary text, secondary text and icons, labels and metadata. Inside WebGL, `graph-line` draws edges and `graph-muted` draws unmarked nodes.
+- **Rules** (`rule`, `rule-strong`): `rule` separates inside a sheet and is the hover wash; `rule-strong` frames sheets, controls and the shell bars.
+- **Drafting Grid** (`grid`, `grid-major`): the 24px minor and 120px major grid behind the graph.
+- **Scrim** (`scrim`): behind the start screen and small on-graph readouts.
 
-**The Evidence Rule.** Demo, missing, limited, loading, and error states remain explicit. A visual transition must never imply that repository data changed.
+### Named Rules
+
+**The Chrome Yellow Rule.** Chrome yellow appears only on something that can be pressed or something that is currently chosen. Status is never yellow: the demo tag is drawn in ink with a dashed border.
+
+**The Correction Rule.** Red means change or risk and nothing else. It always travels with a word, a Δ, a count or a shape (cloud, triangle, dashed outline), never as colour alone.
+
+**The Evidence Rule.** Demo, missing, partial, loading and error states are stated in words on the sheet. A lens that derives from history says how many commit pairs it is based on and downloads nothing on its own.
 
 ## Typography
 
-Self-hosted Inter Variable supplies interface text. Self-hosted JetBrains Mono supplies code, paths, keyboard hints, and measurements. The default interface size is compact; workspace titles and Inspector headings carry hierarchy rather than large decorative display type.
+**Display Font:** Barlow (with Helvetica Neue, Arial)
+**Body Font:** Barlow 400/500/600 (with Helvetica Neue, Arial)
+**Label/Mono Font:** Barlow Condensed 500/600 (with Arial Narrow) for title-block labels; JetBrains Mono 400/500 (with ui-monospace, Menlo) for paths, hashes, keys and figures. All self-hosted through @fontsource.
 
-The frontmatter records the base hierarchy. Navigation and primary buttons use the label size. File paths and technical metadata use the code role, with smaller local variants for dense timeline and legend labels. Paragraphs use a line height of 1.65. Panel labels use 10px, weight 550, and `0.05em` tracking. Analysis workspace headings use 23px and weight 550; function and pipeline details use the same technical hierarchy as Inspector content.
+**Character:** An engineering sheet's lettering: plain grotesque for reading, condensed tracked capitals for the cells of a title block, and a monospace for anything copied from the repository.
+
+### Hierarchy
+
+- **Display** (600, clamp(28px, 4vw, 40px), 1.1, -0.02em): the start-screen headline only.
+- **Headline** (600, 22px, -0.01em): analysis workspace titles (Dependencies, Functions, Pipelines).
+- **Title Large** (600, 19px): the Inspector's file or entity name; function and job titles at 20px.
+- **Title** (600, 15px): the lens card heading and the lens tab name; title-block values at 16px.
+- **Lead** (400, 15px, 1.45): the one-sentence answer at the top of the lens card; the start-screen lead at 16px, max 62ch.
+- **Body** (400, 14px, 1.4): default UI text. Secondary notes and legends at 12.5px in `ink-3`.
+- **Label** (Barlow Condensed 600, 11.5px, 0.09em, uppercase): panel headings, section headings, lens sub-headings, field labels, title-block labels (10.5px), count and property terms, command-palette groups, the tip step count, the detail-level readout.
+- **Mono** (JetBrains Mono 400, 12px; 11px in dense rows): paths, SHAs, branch names, node labels, kbd hints, the spine scale.
+- **Figure** (JetBrains Mono, 19px, tabular): count cells; the health total at 40px/500; property values at 14px.
+
+### Named Rules
+
+**The Title Block Rule.** Tracked condensed capitals name a cell, a panel or a group, and sit with the data they label. They are never a decorative line above a headline.
+
+**The Copied Text Rule.** Anything that could be pasted back into a terminal (path, hash, branch, function name) is set in JetBrains Mono. Paths truncate from the left so the filename stays visible.
 
 ## Layout
 
-A full-height flex instrument frame keeps the graph central. Files, Inspector, History, and CI have explicit visibility controls in a 49px layout bar. The base desktop geometry is a 58px header, 54px repository toolbar, 240px Files panel, 300px Inspector, 134px history panel, 66px CI strip, and 27px status bar. Files starts open at desktop widths of at least 1200px; Inspector starts closed, History open, and CI closed. Closing a panel returns its space to the workspace. The shell fits the viewport without a minimum-height floor.
+The shell is a four-row grid: a 56px top bar, a 56px lens bar, the graph workspace, and the time spine. The graph fills its row edge to edge; the lens card (330px) floats at the top-left and the Inspector (340px) floats at the right, both inset 14px from the drawing's edges. Graph tools stack at the bottom-right and the detail-level readout at the bottom-left, both inset 14px. Camera framing fits the drawing into the area the lens card and Inspector leave free, so nodes never sit under a panel.
 
-At 1199px and below, Files and Inspector become mutually exclusive drawers: 310px and 330px wide, capped at 90vw and 92vw. The header is 57px and icon controls become 42px. At 760px and below, the header becomes 92px with a separate navigation row and the repository toolbar becomes 90px with a full-width search row. At 1360px and below, secondary brand and spatial-status copy recede. Analysis workspaces respond to their own container: pipelines stack below 1000px and function list/details stack below 650px.
+The time spine splits into the spine (LOC line, real-time commit ticks, 84px track) and a title block 380px wide at the right (330px at 1360px, 280px at 1100px, where it keeps only sheet, revision and date). Commit positions follow real elapsed time; a quiet month looks quiet.
 
-Coarse pointers raise the control token to 44px, enlarge tree rows, labels, and panel toggles, and expose a history range slider in place of tiny commit hit targets. History expands to 160px (155px on narrow screens); compact-height windows at 650px and below reduce it to 112px and hide the status bar. Mobile graph tools remain explicit and reachable.
+The drafting grid (24px minor, 120px major) is drawn only behind the graph. Bars, panels and analysis workspaces sit on flat ground.
 
-Fullscreen hides the header, repository toolbar, status bar, and initially all optional panels, leaving the graph and layout controls. It requests native fullscreen when available and retains the expanded layout otherwise. Exiting restores the previous panel visibility. The F shortcut and Escape provide entry and exit.
+Rhythm runs on 2px, 8px, 14px and 16px: 2px internal padding in segmented controls, 8px gaps between controls, 14px floating insets and card padding, 16px panel padding. Controls are 34px high (44px on coarse pointers, with 40px tree rows and a history range slider in place of tick targets).
 
-Spacing remains precise, with larger labels and touch targets supporting a simpler workbench. Dependency, function, and pipeline analysis use closeable task workspaces rather than crowding the cloud with additional layers of controls.
+Responsive steps: at 1360px lens tabs drop their question line; at 1100px tool buttons go icon-only; at 760px the top bar wraps with ⌘K on its own row, the lens strip scrolls with a fading edge, the lens card spans the width at the top (max 55%), the Inspector docks to the bottom (max 62%), and the title block is replaced by a one-line revision caption. Expanded mode hides the top bar and time spine.
 
 ## Elevation & Depth
 
-Panel depth comes primarily from dark tonal layering and fine borders. Floating controls, search results, settings, and mobile panels use soft black shadows. Search results use `0 12px 36px #0008`; settings use `0 14px 38px #0008`; graph annotations use a small text shadow and translucent fill without a box shadow. The Morph control relies on its border and active inset stroke rather than a floating shadow. Small graph indicators may glow, but text remains crisp.
+The system is flat. `--shadow` is `none` everywhere, and every floating sheet (lens card, Inspector, popovers, palette results, hover card, tips, toasts) is separated by a 1px `rule-strong` border and its own sheet fill. State uses insets drawn as rules, not depth: a 2px bottom inset in chrome yellow for chosen tabs and selected node labels, a 1px inset ring for the active palette row. The only depth is the graph's own 3D space, which is drawn in flat ink with no bloom or glow.
 
-The graph uses point cores, additive halos, non-interactive atmospheric specks, and bloom. Bloom belongs to spatial geometry. There is no ambient camera rotation. Low-power mode removes bloom, reduces atmospheric specks from 2600 to 600, and fixes pixel ratio at 1 instead of the normal 1–1.6 range. Software renderers are detected where renderer information is available; a slow initial frame sample also enables low-power mode. If WebGL cannot start, an explicit fallback directs users to Files and Inspector.
+### Named Rules
+
+**The Hairline Rule.** Rules, not shadows, separate the sheet. If a surface needs separating, give it a 1px rule; never a shadow, glow or blur halo.
+
+**The One Grid Rule.** The drafting grid exists only behind the graph and in the exported sheet. No other surface carries a grid or texture.
 
 ## Shapes
 
-Controls have gently rounded corners: four pixels for technical tags, five for graph labels and Morph choices, six for icon buttons, fields, and primary buttons, and eight for settings and the Morph container. Circles mark point nodes, status dots, and pipeline icons. The frame remains rectangular and divided by fine one-pixel borders.
+Sheets and controls have the slightly eased corner of a cut sheet (3px). Marks inside a sheet (tags, node labels, list rows, segmented choices, kbd) use 2px. Circles are reserved for nodes, legend dots and cluster dots. The drawing's own geometry is drafting geometry: stroked circles with centre dots, an eight-scallop revision cloud around a changed file, a dashed ring for a removed file, an upward triangle above a large commit tick, dashed borders for status (demo tag, failing job, moved row).
 
 ## Components
 
-### Buttons, fields, and navigation
+### Buttons
 
-Primary buttons use the blue surface, border, hover, radius, and padding tokens above. Icon buttons are compact squares with a darker blue active/hover surface. Disabled buttons use opacity 0.4 and a not-allowed cursor. Interactive controls and links receive a two-pixel cyan focus-visible outline with a three-pixel offset. Inputs use the field surface and border, muted placeholders, and cyan caret. Navigation uses a clear cyan active underline. Desktop icon controls are 36px squares; tablet and coarse-pointer sizing follow the Layout rules.
+- **Shape:** cut-sheet corners (3px).
+- **Primary:** chrome yellow fill with `act-ink` text, 600 weight, 38px high with 16px side padding (32px small in tips, 40px on the start screen). Used for the one forward action in a context: Open, Next tip, focus a group, Exit focus.
+- **Hover / Focus:** hover lifts to `chrome-yellow-hover`; every focusable element gets a 2px outline in `focus` (chrome yellow on Cyanotype, navy ink on Whiteprint) offset 2px. Disabled drops to 0.42 opacity.
+- **Secondary / Tool:** transparent with a 1px `rule-strong` border, 34px high; hover darkens the border to `ink-2` and adds the `rule` wash. Export, Share, Back to cloud and Load more use this form.
+- **Icon button:** 34px square, `ink-2`; hover `rule` wash; active fills chrome yellow.
+- **Text link:** ink text with a `rule-strong` underline offset 3px; the underline turns chrome yellow on hover.
 
-### Camera controls and selection
+### Chips
 
-Zoom in, Zoom out, and Fit cloud are explicit graph controls with +, −, and 0 keyboard shortcuts. Wheel, pinch, orbit, and pan gestures remain available. Fit computes visible graph bounds against viewport aspect ratio. Layers uses an elevated camera and a sphere bound so depth remains visible; group focus frames the group’s files rather than its left-edge heading. Camera moves preserve the intended target, settle over 1.1 seconds, and become immediate under Reduced Motion. Selection approaches files and functions closely enough to reveal detail; interaction interrupts camera motion.
+- **Demo tag:** Barlow Condensed uppercase label in ink inside a 1px dashed `ink-2` border, 2px corners. It appears in the top bar, the history row, the Inspector heading and the start-screen demo row whenever demo data is on screen.
+- **Tag:** same lettering in `ink-2` inside a solid `rule-strong` border, for neutral metadata.
+- **Δ rev tag:** JetBrains Mono 11px in correction red inside a 1px red border ("Δ rev 16"), on changed rows in the Evolution lens card.
 
-Point selection uses projected screen positions with a 16px mouse or 26px touch radius, excluding removed ghosts and invisible points. A drag beyond eight pixels or a multi-touch gesture does not select a node. Nearby named labels provide a second route to file and function selection. Annotations use compact 10px text in translucent 22px-high surfaces; close-up group headings recede unless focused or selected. One collision pool prioritizes selection and prevents group/detail labels from covering each other. These small annotations have point-picking and Files/search alternatives on touch devices. Search and analysis rows use the same locate action to return to the cloud and select the referenced entity.
+### Cards / Containers
 
-### Analysis workspaces
+- **Corner Style:** 3px.
+- **Background:** `sheet`; tips use `sheet-raise`.
+- **Shadow Strategy:** none (see Elevation & Depth).
+- **Border:** 1px `rule-strong`; internal dividers in `rule`.
+- **Internal Padding:** 12px 14px for the lens card body, 14px 16px for the Inspector.
 
-Dependencies, Functions, and Pipelines open distinct, closeable workspaces. Selecting the active navigation tab again, Back to cloud, the close button, or Escape returns to Explore; the prior panel arrangement is restored. The mounted graph retains its camera and spatial context while hidden.
+### Inputs / Fields
 
-Dependencies provides filterable file-import relationships and external packages. Functions provides a searchable definition list, selected definition metrics, and resolved callers/callees. Pipelines provides a navigable job dependency map with zoom and fit, status, and selected job steps. Each view exposes relevant empty or unavailable states and a path back to the cloud.
+- **Style:** `field` fill, 1px `rule-strong` border, 3px corners, 8px 10px padding; placeholders in `ink-3`; caret chrome yellow on Cyanotype, ink on Whiteprint.
+- **Focus:** the global 2px focus outline; the ⌘K field darkens its border to `ink-2` on focus-within.
+- **Error:** border turns correction red and a red problem line spans the row below.
 
-### Morph and local focus
+### Navigation
 
-Cloud and Layers are two targets for the same graph, with attached edge endpoints and stable selection. The implemented transition uses reversible exponential damping (5.1, capped frame delta 0.05s, settling threshold 0.0005), settling in approximately 1.5 seconds under normal frame timing. It is not a fixed-duration timeline. Focus unfolds only the selected group; other groups retain their cloud positions and dim to 24% tint. Focus damping is 4. A second focus toggle or Escape closes focus. Layers retains group focus and visibility. The Groups menu can hide individual groups or isolate one group in either layout; restoring all groups clears isolation. Focus and selection reveal their target group. If a branch/commit removes the focused group, focus and isolation clear.
+- **Lens bar:** a Files toggle, then six lens tabs (Architecture, Hotspots, Dependencies, Evolution, Pipelines, Authors), each a name in Title over its question in 12.5px `ink-3`, divided by `rule` hairlines. The active lens fills chrome yellow. Cloud/Layers sits at the right as a segmented control.
+- **Top bar:** brand mark, repository and branch pills, demo tag, the centred ⌘K field, health, Export, Share, theme and settings.
 
-Default Layers assigns a unique vertical slot to every sorted top-level group, with 2.6 graph units between slots. Optional explicit group or glob path rules map to four configured layer indices (0–3); the first matching rule wins, and unmatched files stay visible in an Unassigned lane. Layer assignments describe configured paths, not inferred architecture.
+### Lens card
 
-### Semantic graph detail and legends
+The question of the active lens as its heading, a scope line in condensed capitals (lens / repository / focus / `rev` or `A → B` in mono), a one-sentence lead, a legend sentence, then ranked rows or counts. Ranked rows rerank in place; the selected row takes a chrome-yellow border on `chrome-yellow-soft`, a moved row a dashed red border. Count cells sit in a ruled three-column grid (added, changed, removed) with figures in mono. History-derived lenses end with a coverage note ("from n of N commit pairs"). Collapsible; collapsed it frees its width for camera framing.
 
-Camera distance aggregates relationships at package level above 40 graph units while retaining file points as the cloud silhouette, shows file relationships between 17 and 40, and reveals eligible functions below 17. Graph function detail follows the focused group or selected file; the Functions workspace provides a separate searchable definition list. Package-level relationships aggregate by group; detail edges are filtered by context and capped with visible omitted-edge copy. Node area can use LOC or bytes; color modes show their own meaning in a legend.
+### Time spine and title block
 
-Selection and focused relationships can carry moving signal particles. Reduced Motion switches layouts and camera targets directly and removes decorative signal motion and commit animation; CSS transitions and animations collapse to 0.001ms. Animation pause freezes the decorative clock. Neither option changes the repository snapshot. Files, search, and Inspector provide access without relying solely on 3D pointing.
+The spine draws the LOC line in ink over commit ticks spaced by real time. Large commits (top 15% by changed files) carry a red revision triangle; the current commit is a 4px chrome-yellow bar (Whiteprint uses the selection gold #b87a00), the compare base a 4px ink bar. Dragging across ticks draws a chrome-yellow compare band and compares on release; the tooltip reads "Release to compare with …". The title block at the right is a ruled grid of cells (Sheet message, Revision `A → B`, Drawn by, Date, No. n / N · branch), each a condensed label over a value.
 
-### Branches
+### Revision marks (graph)
 
-The branch name is a direct switcher with search, 100-entry pagination, manual branch entry, and loading/error/retry states. Successful branch changes atomically replace the snapshot and history. Mobile keeps branch selection on the first repository-toolbar row and search on the second.
+In Evolution, changed files tint correction red and take a revision cloud; additions tint mint and fade in; removed files stay as dashed outlines with no paper fill. When more than 40% of files changed, clouds go only to the most-revised fifth so the mark still picks something out. The three most-revised changed files carry a Δ tag with "rev n" on their node label; the full changed list carries Δ rev tags in the lens card. Node labels are mono on `sheet` with a `rule-strong` hairline; cluster labels are condensed capitals with a stroked group dot and a file count.
 
-### History and CI
+### Hover card
 
-The hideable history selects static commit snapshots, preserves available identities, and briefly distinguishes added, removed, and changed files. Playback waits for loaded data. CI uses labeled job status and relationships with details in the Inspector. Missing runs and unsupported information remain visibly unavailable; no success is invented. Cached snapshots and idle warming speed repeat commit visits without changing the visual meaning of a commit. Loading retains the current snapshot until its replacement is ready; cache status stays secondary to the selected snapshot. A shared browser API queue reuses mutable metadata for two minutes, reserves 20 requests from background warming, retains cooldown/reset data across reloads, and exposes remaining requests/reset time beside history. Pinned history analysis omits metadata/ref resolution and live CI lookups; pipeline structure and an explicit warning remain available. The browser snapshot cache version changes with this analysis behavior.
+A non-interactive sheet (max 300px) with a 1px `ink-2` border: name, mono path, state in red (changed) or mint (added), and a condensed hint line.
+
+### ⌘K palette
+
+A results sheet under the field, grouped by condensed capital headings (lenses, actions, files, commits). The active row takes `chrome-yellow-soft` with a 1px chrome-yellow inset ring; secondary lines are mono in `ink-3`.
+
+### Start screen and tips
+
+The start screen is an 820px sheet over the scrim: display headline, lead, a repository field and branch field with a primary Open button, then ruled columns of example and recent repositories in mono (the demo row bordered and tagged). Three tips follow on first visit ("Start with a question", "Turn and zoom the plan", "Move through revisions"), each a `sheet-raise` card with Skip tips, a condensed step count (1 / 3) and a primary Next tip.
+
+### Sharing and export
+
+View state (repository, revision, lens, layout, selection, compare base, focus) is written to the URL so a shared link reopens the same view. PNG export renders a sheet: the uncovered part of the graph on ground, the 24px grid, visible labels redrawn as boxed callouts (Δ callouts in red), a ruled frame with zone references, and a title-block strip with repository, lens, legend and revision.
+
+### Fallback, motion and power
+
+Without WebGL the drawing is replaced by a plain statement and an Open files action; Files and the Inspector reach every entity. The Cloud/Layers morph uses exponential damping (rate 5.1), group focus damping 4, camera easing 1 − e^(−8dt); no fixed timelines and no ambient rotation. Reduced motion (OS preference or setting) jumps layouts and camera directly, removes the change pulse and flow particles, and collapses CSS motion to 0.001ms. Low power fixes pixel ratio at 1 (normally 1 to 1.6) and is switched on automatically for software renderers or a slow first-frame sample. Layers places groups by sorted order or by user-written path rules; unmatched files stay visible in Unassigned, and no layer is ever inferred.
 
 ## Do's and Don'ts
 
 ### Do:
 
-- **Do** preserve the approved Morph identity and a single continuous graph.
-- **Do** retain selection and context when changing spatial order.
-- **Do** pair semantic colors with labels or symbols and keep legends tied to the active mode.
-- **Do** keep demo, missing data, partial coverage, and errors explicit.
-- **Do** preserve keyboard access, Reduced Motion, low-power rendering, and the Files/Inspector fallback.
+- **Do** keep chrome yellow to pressable or chosen elements: primary buttons, the active lens, active segmented choices, the current commit, the compare band, selection.
+- **Do** use correction red only for change and risk, always paired with a word, Δ, count, triangle, cloud or dashed outline.
+- **Do** separate every surface with 1px rules (`rule` inside, `rule-strong` around) and 3px corners.
+- **Do** label demo data with the dashed ink demo tag wherever it is on screen, and state history coverage in words.
+- **Do** set paths, hashes, branches and figures in JetBrains Mono, and labels in Barlow Condensed tracked capitals beside the data they name.
+- **Do** keep one persistent graph across Cloud, Layers and every lens, with selection and identity preserved.
+- **Do** space commits on the time spine by real elapsed time.
+- **Do** keep reduced motion, low power and the Files/Inspector fallback working for every new graph feature.
 
 ### Don't:
 
-- **Don't** add ambient camera rotation or apply graph bloom to text.
-- **Don't** invent architectural layer classifications or hide unmatched files.
-- **Don't** substitute demo data for failed real analysis without an explicit user action.
-- **Don't** treat atmospheric specks as repository entities or display them as data counts.
+- **Don't** add box shadows, glows, bloom or halos; `--shadow` stays `none`.
+- **Don't** draw the drafting grid anywhere but behind the graph and in the exported sheet.
+- **Don't** use chrome yellow for status, tags, decoration or non-interactive containers.
+- **Don't** put a revision cloud on every changed file in a wide comparison; clouds go to the most-revised fifth.
+- **Don't** invent architectural layers or hide files that match no layer rule.
+- **Don't** let a visual transition suggest that repository data changed, or substitute demo data for failed real analysis.
+- **Don't** set tracked condensed capitals as a decorative line above a heading.

@@ -1783,7 +1783,7 @@ kbd {
   gap: 6px;
   padding: 12px 14px;
   background: var(--sheet-raise);
-  border: 1px solid var(--act);
+  border: 1px solid var(--ink-2);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
@@ -1973,7 +1973,7 @@ kbd {
   background: var(--ink);
 }
 :root[data-theme="whiteprint"] .commit-tick.current i {
-  background: #d99a00;
+  background: #b87a00;
 }
 .commit-tooltip {
   position: absolute;
