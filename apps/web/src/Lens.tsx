@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -9,10 +9,18 @@ import {
   LayoutDashboard,
   X,
 } from "lucide-react";
-import { useRepo, lenses, clearCompare, type Lens } from "./state";
+import {
+  useRepo,
+  lenses,
+  clearCompare,
+  samplePlan,
+  sampleHistory,
+  type Lens,
+} from "./state";
 import { GroupVisibility } from "./ExplorationControls";
 import { authorColor, groupColor, inks } from "./colors";
 import { impactOf } from "../../../packages/core/src/impact";
+import { entryPoints, flowFrom } from "../../../packages/core/src/flow";
 import {
   authorship,
   hotspots,
@@ -119,15 +127,33 @@ function Scope() {
 }
 
 function HistoryNote({ what }: { what: string }) {
-  const history = useRepo((s) => s.history);
+  const { history, snapshot, commits, sampling } = useRepo();
   if (!history) return <p className="lens-note">Reading opened commits…</p>;
-  const { compared, total } = history.coverage;
+  const { compared, total, sampledCommits } = history.coverage,
+    periods = samplePlan(commits).length;
   return (
-    <p className="lens-note">
-      {what} from {compared} of {total} commit pairs.{" "}
-      {compared < total &&
-        "Only commits already opened or cached are compared; nothing is downloaded for this lens."}
-    </p>
+    <div className="lens-note history-note">
+      <p>
+        {sampledCommits
+          ? `${what} approximated from ${compared} sampled periods across ${sampledCommits} commits.`
+          : `${what} from ${compared} of ${total} commit pairs.`}{" "}
+        {!sampledCommits &&
+          compared < total &&
+          "Only commits already opened or cached are compared."}
+      </p>
+      {!snapshot.demo && !sampledCommits && periods > 0 && compared < total && (
+        <button
+          className="secondary-button"
+          disabled={!!sampling}
+          onClick={() => void sampleHistory()}
+          title="Compares about a dozen points across the loaded history on GitHub instead of opening every commit."
+        >
+          {sampling
+            ? `Sampling ${sampling.done} / ${sampling.total}…`
+            : `Sample the whole history (${periods} requests)`}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -406,6 +432,12 @@ function Dependencies() {
         >
           Function calls
         </button>
+        <button
+          className="secondary-button"
+          onClick={() => toggleView("Architecture")}
+        >
+          Architecture diagram
+        </button>
       </div>
     </>
   );
@@ -476,6 +508,9 @@ function Evolution() {
           <dd style={{ color: ink.revision }}>−{diff.removed.length}</dd>
         </div>
       </dl>
+      {useRepo.getState().compareNote && (
+        <p className="lens-note">{useRepo.getState().compareNote}</p>
+      )}
       <label className="lens-toggle">
         <input
           type="checkbox"
@@ -631,6 +666,145 @@ function ChangedList() {
           {shown.length - limit}
         </button>
       )}
+    </>
+  );
+}
+
+function Flow() {
+  const { snapshot, selectedId, flowDepth, set, select, toggleView, theme } =
+      useRepo(),
+    node = snapshot.nodes.find(
+      (n) => n.id === selectedId && n.kind !== "package",
+    ),
+    entries = useMemo(() => entryPoints(snapshot, 6), [snapshot]),
+    flow = useMemo(
+      () => (node ? flowFrom(snapshot, node.id, flowDepth) : null),
+      [snapshot, node, flowDepth],
+    ),
+    ink = inks[theme];
+  const open = (
+    <div className="lens-actions">
+      <button
+        className="primary-button small"
+        onClick={() => toggleView("Flow")}
+      >
+        Open flow diagram
+      </button>
+      <button
+        className="secondary-button"
+        onClick={() => toggleView("Architecture")}
+      >
+        Architecture diagram
+      </button>
+    </div>
+  );
+  if (!node || !flow)
+    return (
+      <>
+        <p className="lens-lead">
+          Pick a starting point to follow how the code runs, call by call.
+        </p>
+        <p className="lens-legend">
+          Likely entry points: nothing resolved calls or imports them, and they
+          reach the most.
+        </p>
+        <div className="legend-list">
+          {entries.map((e) => (
+            <button
+              key={e.node.id}
+              onClick={() => select(e.node.id)}
+              title={e.node.path}
+            >
+              <span className="path">
+                {e.kind === "calls"
+                  ? `${e.node.name}() · ${e.node.path}`
+                  : e.node.path}
+              </span>
+              <small>reaches {e.reach}</small>
+            </button>
+          ))}
+          {!entries.length && (
+            <p className="lens-empty">
+              No resolved calls or imports in this snapshot.
+            </p>
+          )}
+        </div>
+        {open}
+      </>
+    );
+  const byDepth = new Map<number, string[]>();
+  for (const s of flow.steps.slice(1))
+    byDepth.set(s.depth, [...(byDepth.get(s.depth) ?? []), s.id]);
+  const max = Math.max(1, ...[...byDepth.values()].map((v) => v.length));
+  return (
+    <>
+      <p className="lens-lead">
+        <b>{flow.kind === "calls" ? `${node.name}()` : node.name}</b>{" "}
+        {flow.steps.length > 1
+          ? `${flow.kind === "calls" ? "calls" : "imports"} ${flow.steps.length - 1} ${flow.kind === "calls" ? "functions" : "files"} in ${byDepth.size} ${byDepth.size === 1 ? "step" : "steps"}.`
+          : `${flow.kind === "calls" ? "calls no resolved function" : "imports no indexed file"}.`}
+      </p>
+      <label className="lens-range">
+        <span>
+          Follow {flowDepth} {flowDepth === 1 ? "step" : "steps"}
+        </span>
+        <input
+          type="range"
+          min={1}
+          max={8}
+          value={flowDepth}
+          aria-label="Flow depth"
+          onChange={(e) => set({ flowDepth: Number(e.target.value) })}
+        />
+      </label>
+      {byDepth.size > 0 && (
+        <div className="group-bars">
+          {[...byDepth].map(([d, ids]) => (
+            <div key={d}>
+              <span>Step {d}</span>
+              <span className="bar">
+                <i
+                  style={{
+                    width: `${(ids.length / max) * 100}%`,
+                    background: d === 1 ? ink.ink : ink.line,
+                  }}
+                />
+              </span>
+              <small>{ids.length}</small>
+            </div>
+          ))}
+        </div>
+      )}
+      {byDepth.get(1) && (
+        <>
+          <h3 className="lens-sub">First step</h3>
+          <div className="legend-list">
+            {byDepth
+              .get(1)!
+              .slice(0, 8)
+              .map((id) => {
+                const n = snapshot.nodes.find((x) => x.id === id);
+                return (
+                  n && (
+                    <button key={id} onClick={() => select(id)} title={n.path}>
+                      <span className="path">
+                        {n.kind === "function"
+                          ? `${n.name}() · ${n.path}`
+                          : n.path}
+                      </span>
+                    </button>
+                  )
+                );
+              })}
+          </div>
+        </>
+      )}
+      {open}
+      <p className="lens-note">
+        Static view: only resolved {flow.kind === "calls" ? "calls" : "imports"}
+        . Callbacks, dynamic dispatch and calls into packages are not followed
+        {flow.truncated ? "; more steps lie beyond this depth" : ""}.
+      </p>
     </>
   );
 }
@@ -792,6 +966,7 @@ function Authors() {
 }
 
 const bodies: Record<Exclude<Lens, "pipelines">, () => React.ReactNode> = {
+  flow: Flow,
   impact: Impact,
   architecture: Architecture,
   hotspots: Hotspots,
@@ -801,10 +976,15 @@ const bodies: Record<Exclude<Lens, "pipelines">, () => React.ReactNode> = {
 };
 
 export function LensCard() {
-  const { lens } = useRepo(),
+  const { lens, inspectorOpen } = useRepo(),
     [collapsed, setCollapsed] = useState(
       typeof innerWidth !== "undefined" && innerWidth < 760,
     );
+  // On tablets in portrait and on phones, the card folds away when the Inspector opens so the drawing stays visible.
+  useEffect(() => {
+    if (inspectorOpen && innerWidth < 1100 && innerHeight > innerWidth)
+      setCollapsed(true);
+  }, [inspectorOpen]);
   if (lens === "pipelines") return null;
   const Body = bodies[lens],
     meta = lenses.find((l) => l.id === lens)!;

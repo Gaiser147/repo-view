@@ -323,7 +323,7 @@ Sheets and controls have the slightly eased corner of a cut sheet (3px). Marks i
 
 ### Navigation
 
-- **Lens bar:** a Files toggle, then seven lens tabs (Architecture, Hotspots, Dependencies, Impact, Evolution, Pipelines, Authors), each a name in Title over its question in 12.5px `ink-3`, divided by `rule` hairlines. The active lens fills chrome yellow; keys 1–7 switch lenses. Cloud / Layers / Plan sits at the right as a segmented control.
+- **Lens bar:** a Files toggle, then eight lens tabs (Architecture, Flow, Hotspots, Dependencies, Impact, Evolution, Pipelines, Authors), each a name in Title over its question in 12.5px `ink-3`, divided by `rule` hairlines. The active lens fills chrome yellow; keys 1–8 switch lenses; below 1600px the question lines drop and the name carries the tab. Cloud / Layers / Plan sits at the right as a segmented control.
 - **Breadcrumbs:** Back and Forward (30px icon buttons on `sheet`, also `[` and `]`) followed by the mono path of the selection (repository › group › folders › file › ƒ function) on a hairline sheet, top of the drawing beside the lens card. Group and file crumbs are buttons; folders are plain text. On phones the bar moves above the detail indicator and drops folder crumbs.
 - **Top bar:** brand mark, repository and branch pills, demo tag, the centred ⌘K field, health, Export, Share, theme and settings.
 
@@ -337,7 +337,19 @@ The spine draws the LOC line in ink over commit ticks spaced by real time. Large
 
 ### Floor plan (graph)
 
-The third layout target. Groups, folders and files become nested rooms of a squarified treemap sized by lines of code, drawn flat in the XY plane as hairline frames (groups in ink, folders in `line`, files fainter) that fade in with the plan. Files sit at the centre of their room, functions on a small grid inside it, group labels at their room's top-left corner, and the largest first-level folders carry condensed-capital labels. Edges recede to a fifth of their weight unless selected or reached. The camera frames the plan straight on. Same nodes, same identities: the plan is a morph target, never a separate view.
+The third layout target. Groups, folders and files become nested rooms of a squarified treemap sized by lines of code, drawn flat in the XY plane as solid rooms with hairline frames that fade in with the plan: group and folder rooms are faint ink tints of the ground that deepen with nesting, file rooms take their mark's ink at 16% (cyanotype) or 26% (whiteprint), and frames run ink for groups, `line` for folders. Vertex colours are converted from sRGB so the rooms match the CSS inks. Files sit at the centre of their room, functions on a small grid inside it, group labels at their room's top-left corner, and the largest first-level folders carry condensed-capital labels. Edges recede to a fifth of their weight unless selected or reached. The camera frames the plan straight on. Same nodes, same identities: the plan is a morph target, never a separate view.
+
+### Flow lens and diagrams
+
+Flow follows what the selected function calls, or what a file imports, step by step over resolved edges, and colours the reached marks in ink with chrome-yellow edges (it shows the chosen path, not risk). Without a selection the card offers likely entry points: functions nothing resolved calls and files nothing imports, ranked by reach. **Flow diagram** draws the same steps left to right as ruled boxes on the drafting grid (function name in Title, mono path beneath), tree links solid, rejoining links dashed, the start box outlined in chrome yellow; boxes are buttons that re-root the flow. **Architecture diagram** places groups as dashed-outline frames holding their top folders as boxes, linked by import routes whose stroke width scales with the number of imports; arrow ends spread along each box side and arrowheads keep a fixed size. Pointing at (or tapping) a folder isolates its routes in chrome yellow. **npm scripts** lists each package.json script as a ruled card with its command in mono, the scripts it runs (pre/post hooks included) and CI tags for jobs that run it; scripts run by another are indented with a dashed border.
+
+### Labels
+
+Detail labels are text with a ground-coloured halo, placed in the first free corner beside their point (NE, NW, SE, SW, above, below) and joined to it by a 1px `ink-3` leader. Placement avoids other labels and every labelled mark, keeps last frame's corner to stop jitter, and hides while the camera moves; group labels fade to 45%. The tag button cycles all labels, group labels only and none.
+
+### Touch
+
+Every new control has a 44px target on coarse pointers. Double-tap flies closer (touch browsers do not send double-click reliably), folders in the Architecture diagram isolate on tap, and on tablets in portrait the Inspector becomes a bottom sheet while the lens card folds away, so the drawing stays visible.
 
 ### Impact lens (graph)
 

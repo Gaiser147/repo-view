@@ -2933,3 +2933,349 @@ kbd {
 .path::after {
   content: "\200E";
 }
+
+/* Callout labels: text with a ground-coloured halo, offset from the point and tied to it by a leader line */
+.callout {
+  position: relative;
+  width: 0;
+  height: 0;
+}
+.callout .leader {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+}
+.callout .leader line {
+  stroke: var(--ink-3);
+  stroke-width: 1;
+}
+.callout .node-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: transparent;
+  border: 0;
+  padding: 1px 3px;
+  color: var(--ink);
+  text-shadow:
+    0 0 2px var(--ground),
+    0 0 4px var(--ground),
+    0 0 6px var(--ground),
+    1px 1px 0 var(--ground),
+    -1px -1px 0 var(--ground);
+}
+.callout .node-label.selected {
+  background: var(--act);
+  color: var(--act-ink);
+  text-shadow: none;
+  box-shadow: none;
+}
+.cluster-label {
+  background: transparent;
+  border: 0;
+  text-shadow:
+    0 0 3px var(--ground),
+    0 0 6px var(--ground),
+    0 0 9px var(--ground);
+}
+.cluster-label small {
+  text-shadow: inherit;
+}
+.cluster-label.focused {
+  background: var(--act);
+  color: var(--act-ink);
+  text-shadow: none;
+}
+.graph-canvas.moving .callout,
+.graph-canvas.moving .plan-label {
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.graph-canvas.moving .cluster-label {
+  opacity: 0.45;
+}
+.callout,
+.plan-label,
+.cluster-label {
+  transition: opacity 0.25s;
+}
+.plan-label {
+  color: var(--ink);
+  text-shadow:
+    0 0 3px var(--ground),
+    0 0 6px var(--ground);
+}
+@media (max-width: 1600px) {
+  .lens small {
+    display: none;
+  }
+  .lens {
+    padding: 0 14px;
+  }
+}
+
+/* History sampling note */
+.history-note {
+  display: grid;
+  gap: 8px;
+}
+.history-note p {
+  margin: 0;
+}
+.history-note .secondary-button {
+  justify-self: start;
+  height: 30px;
+  font-size: 13px;
+}
+
+/* Diagram workspaces: flow, architecture, scripts */
+.workspace-tabs {
+  padding: 10px 18px 0;
+}
+.diagram-workspace {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+}
+.diagram-workspace.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+.diagram-side {
+  padding: 14px 16px;
+  border-right: 1px solid var(--rule-strong);
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.diagram-side .legend-list button.active {
+  background: var(--act-soft);
+  outline: 1px solid var(--act);
+  outline-offset: -1px;
+}
+.diagram-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.diagram-note {
+  margin: 0;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--rule);
+}
+.diagram-canvas {
+  flex: 1;
+  min-height: 0;
+  padding: 12px;
+  background-color: var(--ground);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.diagram-canvas svg {
+  display: block;
+}
+.diagram-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.diagram-zoom span {
+  min-width: 44px;
+  text-align: center;
+  color: var(--ink-3);
+}
+.diagram-box rect {
+  fill: var(--sheet);
+  stroke: var(--rule-strong);
+  stroke-width: 1.2;
+}
+.diagram-box.start rect {
+  stroke: var(--act);
+  stroke-width: 2;
+}
+.diagram-box[role="button"] {
+  cursor: pointer;
+}
+.diagram-box[role="button"]:hover rect {
+  stroke: var(--ink-2);
+}
+.diagram-box:focus {
+  outline: none;
+}
+.diagram-box:focus-visible rect {
+  stroke: var(--focus);
+  stroke-width: 2.5;
+}
+.diagram-name {
+  fill: var(--ink);
+  font: 500 14px var(--sans);
+}
+.diagram-path {
+  fill: var(--ink-3);
+  font: 11px var(--mono);
+}
+.diagram-link {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 1.4;
+}
+.diagram-link.cross {
+  stroke: var(--ink-3);
+  stroke-dasharray: 4 4;
+  opacity: 0.7;
+}
+.diagram-link.arch {
+  stroke: var(--ink-2);
+  opacity: 0.5;
+}
+.diagram-link.arch.lit {
+  stroke: var(--act);
+  opacity: 1;
+}
+.diagram-link.arch.faded {
+  opacity: 0.08;
+}
+.diagram-arrowhead {
+  fill: var(--ink-2);
+}
+.arch-group rect {
+  fill: var(--sheet);
+  fill-opacity: 0.55;
+  stroke: var(--ink-3);
+  stroke-dasharray: 6 4;
+}
+.arch-group-label {
+  fill: var(--ink-2);
+  font: 600 12px var(--label);
+  letter-spacing: 0.09em;
+  cursor: pointer;
+}
+.script-pipeline {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 18px 24px;
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+.script-manifest ol {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.script-manifest li {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--sheet);
+}
+.script-manifest li.called {
+  margin-left: 24px;
+  border-style: dashed;
+}
+.script-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.script-manifest code {
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.script-runs {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+@media (max-width: 760px) {
+  .diagram-workspace {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+  .diagram-side {
+    border-right: 0;
+    border-bottom: 1px solid var(--rule-strong);
+  }
+}
+
+/* Touch: every new control gets a finger-sized target */
+@media (pointer: coarse) {
+  .breadcrumbs .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+  .breadcrumbs li button {
+    padding: 8px 6px;
+  }
+  .chip-row button {
+    height: 40px;
+    padding: 0 12px;
+  }
+  .lens-range input {
+    height: 32px;
+  }
+  .legend-list > button,
+  .ranked button {
+    min-height: 44px;
+  }
+  .lens-toggle input {
+    width: 22px;
+    height: 22px;
+  }
+  .spine-main {
+    grid-template-rows: auto 72px auto auto;
+  }
+  .callout .node-label {
+    padding: 6px 6px;
+  }
+  .diagram-side .legend-list > button {
+    min-height: 44px;
+  }
+  .lens-actions .secondary-button,
+  .lens-actions .primary-button,
+  .history-note .secondary-button {
+    min-height: 44px;
+  }
+}
+
+/* Tablet portrait: the Inspector becomes a bottom sheet instead of a second column over the drawing */
+@media (max-width: 1100px) and (orientation: portrait) {
+  .inspector,
+  .view-explore .inspector {
+    top: auto;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    width: auto;
+    max-width: none;
+    max-height: 46%;
+  }
+  .workbench:has(.inspector) .graph-tools,
+  .workbench:has(.inspector) .breadcrumbs {
+    right: 14px;
+  }
+  .workbench:has(.inspector) .graph-tools {
+    bottom: calc(46% + 20px);
+  }
+}
+
+.breadcrumbs li svg {
+  flex: none;
+}
+.breadcrumbs li button,
+.breadcrumbs li span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.breadcrumbs li:last-child {
+  flex-shrink: 0;
+}

@@ -3,7 +3,10 @@ import { analysisRequest } from "../../../../packages/core/src/index";
 import { parseRepository } from "../../../../packages/core/src/repository";
 import { publicGithub } from "./github-client";
 import { readPublicBranches } from "../../../../packages/core/src/github-public";
-import { readPublicHistory } from "../../../../packages/core/src/github-public";
+import {
+  readPublicCompare,
+  readPublicHistory,
+} from "../../../../packages/core/src/github-public";
 interface Job {
   id: string;
   status: "running" | "complete" | "error";
@@ -167,6 +170,17 @@ export async function browserRequest<T>(
       `${history[1]}/${history[2]}`,
       url.searchParams.get("ref") ?? undefined,
       Number(url.searchParams.get("page") ?? 1),
+      ((input, init) =>
+        publicGithub.request(String(input), init)) as typeof fetch,
+    )) as T;
+  const compare = url.pathname.match(
+    /^\/api\/repos\/([^/]+)\/([^/]+)\/compare$/,
+  );
+  if (compare)
+    return (await readPublicCompare(
+      `${compare[1]}/${compare[2]}`,
+      url.searchParams.get("base") ?? "",
+      url.searchParams.get("head") ?? "",
       ((input, init) =>
         publicGithub.request(String(input), init)) as typeof fetch,
     )) as T;

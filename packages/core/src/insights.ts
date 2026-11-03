@@ -11,6 +11,8 @@ export interface HistoryCoverage {
   compared: number;
   /** Consecutive commit pairs in the loaded history. */
   total: number;
+  /** Set when counts come from sampled periods rather than every commit. */
+  sampledCommits?: number;
 }
 export interface History {
   files: Map<string, FileHistory>;
@@ -156,5 +158,39 @@ export function authorship(
       .map(([author, files]) => ({ author, files }))
       .sort((a, b) => b.files - a.files || a.author.localeCompare(b.author)),
     unknown,
+  };
+}
+
+/**
+ * Approximate history from a few comparisons across the whole timeline instead
+ * of one snapshot per commit. Each period contributes at most one change per
+ * file; its most frequent author stands in as the file's last author.
+ */
+export function sampledHistory(
+  periods: { head: string; files: { path: string; status: string; previous?: string }[]; authors: string[] }[],
+  commits: number,
+): History {
+  const files = new Map<string, FileHistory>(),
+    changedPerCommit = new Map<string, number>();
+  for (const period of periods) {
+    const counts = new Map<string, number>();
+    for (const a of period.authors) counts.set(a, (counts.get(a) ?? 0) + 1);
+    const author = [...counts].sort((a, b) => b[1] - a[1])[0]?.[0];
+    for (const f of period.files) {
+      if (f.status === "removed") continue;
+      const entry = files.get(f.path) ?? (f.previous ? files.get(f.previous) : undefined) ?? { changes: 0 };
+      if (f.previous) files.delete(f.previous);
+      entry.changes++;
+      entry.lastAuthor = author ?? entry.lastAuthor;
+      entry.lastSha = period.head;
+      files.set(f.path, entry);
+    }
+    changedPerCommit.set(period.head, period.files.length);
+  }
+  return {
+    files,
+    loc: new Map(),
+    changedPerCommit,
+    coverage: { compared: periods.length, total: periods.length, sampledCommits: commits },
   };
 }

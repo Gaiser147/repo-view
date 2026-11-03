@@ -102,7 +102,7 @@ test("first visit offers a start screen and tips, then lenses re-ink the same pl
   await expect(
     page.getByRole("region", { name: "Hotspots lens" }),
   ).toContainText("changes");
-  await page.keyboard.press("5");
+  await page.keyboard.press("6");
   await expect(
     page.getByRole("button", { name: "Evolution", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
@@ -183,4 +183,55 @@ test("comparison filters changes and dims unchanged files", async ({
   await expect(
     page.getByRole("complementary", { name: "Inspector" }),
   ).toBeVisible();
+});
+test("flow, architecture and script views explain how the code runs", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.waitForSelector("canvas");
+  await page.getByRole("button", { name: "Flow", exact: true }).click();
+  const card = page.getByRole("region", { name: "Flow lens" });
+  await card.locator(".legend-list button").first().click();
+  await expect(card).toContainText(/calls \d+ functions/);
+  await card.getByRole("button", { name: "Open flow diagram" }).click();
+  const flow = page.getByRole("region", { name: "Flow workspace" });
+  await expect(flow.locator(".diagram-box").first()).toBeVisible();
+  expect(await flow.locator(".diagram-box").count()).toBeGreaterThan(1);
+  await page.getByRole("button", { name: "Back to cloud" }).click();
+  await card.getByRole("button", { name: "Architecture diagram" }).click();
+  const arch = page.getByRole("region", { name: "Architecture workspace" });
+  await expect(arch).toContainText("import routes");
+  expect(await arch.locator(".diagram-link").count()).toBeGreaterThan(3);
+  await page.getByRole("button", { name: "Back to cloud" }).click();
+  await page.getByRole("button", { name: "Pipelines", exact: true }).click();
+  await page.getByRole("button", { name: "npm scripts" }).click();
+  await expect(
+    page.getByRole("region", { name: "Pipelines workspace" }),
+  ).toContainText("runs lint → test → build");
+});
+test("labels can be reduced and arrow keys orbit the camera", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.waitForFunction(() => (window as any).__repoViewGraph?.controls);
+  await page.getByRole("button", { name: /^Labels:/ }).click();
+  await expect(
+    page.getByRole("button", { name: "Labels: groups only" }),
+  ).toBeVisible();
+  await page.keyboard.press("l");
+  await expect(page.getByRole("button", { name: "Labels: off" })).toBeVisible();
+  const before = await page.evaluate(
+    () => (window as any).__repoViewGraph.camera.position.x,
+  );
+  await page
+    .locator("canvas")
+    .focus()
+    .catch(() => {});
+  await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+  await page.keyboard.press("ArrowLeft");
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as any).__repoViewGraph.camera.position.x),
+    )
+    .not.toBeCloseTo(before, 1);
 });

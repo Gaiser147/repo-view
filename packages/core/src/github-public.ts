@@ -77,3 +77,52 @@ export async function readPublicBranches(
     hasMore: values.length === 100,
   };
 }
+
+export interface CompareResult {
+  files: {
+    path: string;
+    status: "added" | "removed" | "modified" | "renamed" | "changed" | "copied" | "unchanged";
+    previous?: string;
+    changes: number;
+  }[];
+  commits: Commit[];
+  totalCommits: number;
+  /** GitHub lists at most 300 files per comparison. */
+  truncated: boolean;
+}
+/** Everything that differs between two commits, in one public API request. */
+export function toCompareResult(body: any): CompareResult {
+  const files = (body.files ?? []).map((f: any) => ({
+    path: f.filename,
+    status: f.status,
+    previous: f.previous_filename,
+    changes: f.changes ?? 0,
+  }));
+  return {
+    files,
+    commits: (body.commits ?? []).map((c: any) => ({
+      sha: c.sha,
+      message: String(c.commit?.message ?? "").split("\n")[0],
+      date: c.commit?.author?.date ?? "",
+      author: c.commit?.author?.name ?? "Unknown",
+    })),
+    totalCommits: body.total_commits ?? 0,
+    truncated: files.length >= 300,
+  };
+}
+export async function readPublicCompare(
+  input: string,
+  base: string,
+  head: string,
+  fetcher: Fetcher = fetch,
+): Promise<CompareResult> {
+  const repository = parseRepository(input);
+  if (![base, head].every((s) => /^[a-zA-Z0-9_./-]{1,150}$/.test(s)))
+    throw new Error("Invalid commit for comparison.");
+  return toCompareResult(
+    await publicApi<any>(
+      `repos/${repository}/compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}?per_page=100`,
+      fetcher,
+    ),
+  );
+}

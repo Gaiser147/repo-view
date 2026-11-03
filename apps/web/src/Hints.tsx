@@ -5,12 +5,12 @@ const steps = [
   {
     target: "lenses",
     title: "Start with a question",
-    text: "Each lens re-inks the same plan: structure, risk, dependencies, change, pipelines or authors. Keys 1–6 switch lenses.",
+    text: "Each lens re-inks the same drawing: structure, how it runs, risk, dependencies, impact, change, pipelines or authors. Number keys switch lenses.",
   },
   {
     target: "graph",
     title: "Turn and zoom the plan",
-    text: "Drag to orbit, scroll or pinch to zoom, right-drag to pan. Hover a point to preview it, click to inspect.",
+    text: "Drag to orbit, scroll to zoom toward the pointer, right-drag to pan, double-click to fly closer. Arrow keys orbit, Shift+arrows pan, L cycles labels.",
   },
   {
     target: "history",

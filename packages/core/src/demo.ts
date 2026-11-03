@@ -179,6 +179,15 @@ export function createDemoSnapshot(index = 49): RepoSnapshot {
       unresolvedImports: 3,
       partial: false,
     },
+    scripts: [
+      { manifest: "package.json", name: "dev", command: "vite --host" },
+      { manifest: "package.json", name: "prebuild", command: "npm run typecheck" },
+      { manifest: "package.json", name: "build", command: "vite build" },
+      { manifest: "package.json", name: "typecheck", command: "tsc --noEmit" },
+      { manifest: "package.json", name: "lint", command: "eslint . && npm run typecheck" },
+      { manifest: "package.json", name: "test", command: "vitest run" },
+      { manifest: "package.json", name: "verify", command: "npm run lint && npm test && npm run build" },
+    ],
     dependencies: [
       { name: "react", version: "^19.0.0", dev: false },
       { name: "typescript", version: "^5.9.0", dev: true },

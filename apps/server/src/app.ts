@@ -21,7 +21,7 @@ export async function createApp(
   db.exec(
     "CREATE TABLE IF NOT EXISTS snapshots (repository TEXT, sha TEXT, version TEXT, value TEXT, PRIMARY KEY(repository,sha,version))",
   );
-  const version = "v2",
+  const version = "v3",
     jobs = new Map<
       string,
       {
@@ -149,6 +149,18 @@ export async function createApp(
     const branch =
       req.query.ref ?? (await provider.defaultBranch?.(repo)) ?? "main";
     return { commits: await provider.commits(repo, branch, page), branch };
+  });
+  app.get<{
+    Params: { owner: string; repo: string };
+    Querystring: { base?: string; head?: string };
+  }>("/api/repos/:owner/:repo/compare", async (req, reply) => {
+    const repo = parseRepository(`${req.params.owner}/${req.params.repo}`),
+      { base = "", head = "" } = req.query;
+    if (![base, head].every((s) => /^[a-zA-Z0-9_./-]{1,150}$/.test(s)))
+      return reply.code(400).send({ error: "Invalid commit for comparison." });
+    if (!provider.compare)
+      return reply.code(501).send({ error: "Comparison is not available." });
+    return provider.compare(repo, base, head);
   });
   app.get<{ Params: { owner: string; repo: string; sha: string } }>(
     "/api/repos/:owner/:repo/snapshots/:sha",
