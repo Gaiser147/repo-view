@@ -18,7 +18,7 @@ export function shareUrl() {
   if (s.snapshot.sha && s.snapshot.sha !== "empty")
     p.set("rev", s.snapshot.sha.slice(0, 12));
   if (s.lens !== "architecture") p.set("lens", s.lens);
-  if (s.layout === "layers") p.set("layout", "layers");
+  if (s.layout !== "cloud") p.set("layout", s.layout);
   if (s.selectedId) p.set("select", s.selectedId);
   if (s.compareBase) p.set("from", s.compareBase.slice(0, 12));
   if (s.focus) p.set("focus", s.focus);
@@ -53,8 +53,9 @@ export async function readUrl() {
   const lens = p.get("lens") as Lens | null;
   if (lens && lenses.some((l) => l.id === lens))
     useRepo.getState().setLens(lens);
-  if (p.get("layout") === "layers")
-    useRepo.getState().set({ layout: "layers" });
+  const layout = p.get("layout");
+  if (layout === "layers" || layout === "plan")
+    useRepo.getState().set({ layout });
   const from = full(p.get("from"));
   if (from) await compareCommits(from, useRepo.getState().snapshot.sha);
   const focus = p.get("focus");

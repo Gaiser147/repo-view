@@ -102,7 +102,7 @@ test("first visit offers a start screen and tips, then lenses re-ink the same pl
   await expect(
     page.getByRole("region", { name: "Hotspots lens" }),
   ).toContainText("changes");
-  await page.keyboard.press("4");
+  await page.keyboard.press("5");
   await expect(
     page.getByRole("button", { name: "Evolution", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
@@ -134,4 +134,53 @@ test("comparing two revisions marks the difference and survives a shared link", 
   await expect(
     page.getByRole("region", { name: "Evolution lens" }),
   ).not.toContainText("chosen base");
+});
+
+test("impact lens, floor plan and back/forward work together", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.waitForSelector("canvas");
+  await page.getByRole("button", { name: "Plan", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Plan", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Impact", exact: true }).click();
+  const card = page.getByRole("region", { name: "Impact lens" });
+  await expect(card).toContainText("Select a file");
+  await card.locator(".legend-list button").first().click();
+  await expect(card).toContainText(/depend on|Nothing indexed depends/);
+  await expect(
+    page.getByRole("navigation", { name: "Location" }),
+  ).toContainText(".ts");
+  await page.getByRole("button", { name: "Back" }).click();
+  await expect(card).toContainText("Select a file");
+  await page.keyboard.press("]");
+  await expect(card).toContainText(/depend on|Nothing indexed depends/);
+  await expect.poll(() => page.url()).toContain("layout=plan");
+});
+test("comparison filters changes and dims unchanged files", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.waitForSelector("canvas");
+  const track = await page.locator(".spine-track").boundingBox();
+  if (!track) throw new Error("Time spine missing");
+  const y = track.y + track.height - 6;
+  await page.mouse.move(track.x + track.width * 0.85, y);
+  await page.mouse.down();
+  await page.mouse.move(track.x + track.width * 0.97, y, { steps: 6 });
+  await page.mouse.up();
+  const card = page.getByRole("region", { name: "Evolution lens" });
+  await expect(card).toContainText("chosen base");
+  await card.getByRole("checkbox", { name: "Dim unchanged files" }).check();
+  await card.getByRole("button", { name: /^Changed/ }).click();
+  await expect(card.getByRole("button", { name: /^Changed/ })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await card.locator(".change-list button").first().click();
+  await expect(
+    page.getByRole("complementary", { name: "Inspector" }),
+  ).toBeVisible();
 });

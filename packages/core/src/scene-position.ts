@@ -6,12 +6,20 @@ export function scenePosition(
   group: string,
   options: {
     morph: number;
+    /** 0 = cloud/layers, 1 = floor plan. */
+    plan?: number;
     focus?: string | null;
     focusAmount?: number;
     rules?: Record<string, string>;
   },
 ): Vec3 {
-  const { morph, focus, focusAmount = 1, rules = {} } = options;
+  const { morph, focus, focusAmount = 1, rules = {}, plan = 0 } = options;
+  const target = position.plan;
+  if (plan > 0 && target) {
+    if (plan >= 1) return [...target];
+    const base = scenePosition(position, id, group, { ...options, plan: 0 });
+    return base.map((v, i) => v + (target[i] - v) * plan) as Vec3;
+  }
   let layer = position.layers;
   if (Object.keys(rules).length) {
     const rule = Object.entries(rules).find(

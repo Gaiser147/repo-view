@@ -2770,3 +2770,166 @@ kbd {
     gap: 14px;
   }
 }
+
+/* Breadcrumbs, back/forward, floor plan, impact and comparison controls */
+.breadcrumbs {
+  position: absolute;
+  top: 14px;
+  left: 358px;
+  right: 14px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+  min-width: 0;
+}
+.breadcrumbs > * {
+  pointer-events: auto;
+}
+.breadcrumbs .icon-button {
+  width: 30px;
+  height: 30px;
+  background: var(--sheet);
+  border: 1px solid var(--rule-strong);
+}
+.breadcrumbs ol {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 0 0 6px;
+  padding: 3px 10px;
+  list-style: none;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--sheet);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.breadcrumbs li {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+  min-width: 0;
+}
+.breadcrumbs li button {
+  padding: 3px 4px;
+  border-radius: 2px;
+  color: var(--ink-2);
+}
+.breadcrumbs li button:hover {
+  background: var(--rule);
+  color: var(--ink);
+}
+.breadcrumbs [aria-current="page"] {
+  color: var(--ink);
+  font-weight: 500;
+}
+.workbench:has(.inspector) .breadcrumbs {
+  right: 368px;
+}
+.lens-card.collapsed ~ .breadcrumbs,
+.graph-workspace:has(.lens-card.collapsed) .breadcrumbs {
+  left: 358px;
+}
+.exit-focus {
+  top: auto;
+  bottom: 14px;
+}
+.loading-overlay {
+  top: 58px;
+}
+.plan-label {
+  display: inline-block;
+  white-space: nowrap;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--label);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  pointer-events: none;
+  user-select: none;
+}
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.chip-row button {
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.chip-row button span {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.chip-row button:hover {
+  border-color: var(--ink-2);
+}
+.chip-row button.active {
+  background: var(--act);
+  border-color: var(--act);
+  color: var(--act-ink);
+  font-weight: 600;
+}
+.chip-row button.active span {
+  color: var(--act-ink);
+}
+/* The lens card scrolls as one sheet; a nested scroller would collapse inside its grid. */
+.change-list {
+  overflow: visible;
+}
+.legend-list i.dashed {
+  border: 1.5px dashed;
+}
+.lens-toggle,
+.lens-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.lens-range {
+  justify-content: space-between;
+}
+.lens-range input {
+  flex: 0 1 140px;
+  accent-color: var(--act);
+  padding: 0;
+  border: 0;
+  background: none;
+}
+@media (max-width: 760px) {
+  .breadcrumbs {
+    top: auto;
+    left: 10px;
+    right: 64px;
+    bottom: 40px;
+  }
+  .breadcrumbs .crumb-folder {
+    display: none;
+  }
+  .workbench:has(.inspector) .breadcrumbs {
+    right: 64px;
+  }
+}
+
+/* Left-truncated paths keep leading dots (.github) and trailing extensions in place. */
+.path::before,
+.path::after {
+  content: "\200E";
+}

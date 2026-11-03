@@ -1,4 +1,5 @@
 import type { CodeNode, Layout, NodePosition, Vec3 } from "./index";
+import { planLayout } from "./plan";
 export function hash(s: string): number {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) {
@@ -30,6 +31,7 @@ export function groupIndex(group: string): number {
 }
 export function layoutGraph(nodes: CodeNode[]): Layout {
   const result: Layout = {};
+  const plan = planLayout(nodes).positions;
   const groups = [...new Set(nodes.map((n) => n.group))].sort();
   for (const n of nodes) {
     const i = groupIndex(n.group),
@@ -72,6 +74,7 @@ export function layoutGraph(nodes: CodeNode[]): Layout {
         center[1] + (1 - (hash(n.path.split("/")[1] ?? "root") % 3)) * 2.5,
         center[2] + (v - 0.5) * 5,
       ],
+      plan: plan.get(n.id) ?? [0, 0, 0],
     };
   }
   for (const node of nodes.filter((n) => n.kind === "function")) {
@@ -87,6 +90,7 @@ export function layoutGraph(nodes: CodeNode[]): Layout {
       cloud: parent.cloud.map((v, i) => v + offset[i]) as Vec3,
       layers: parent.layers.map((v, i) => v + offset[i] * 0.6) as Vec3,
       focus: parent.focus.map((v, i) => v + offset[i]) as Vec3,
+      plan: plan.get(node.id) ?? parent.plan ?? [0, 0, 0],
     };
   }
   return result;

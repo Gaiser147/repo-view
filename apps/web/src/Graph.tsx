@@ -26,6 +26,8 @@ import { useRepo } from "./state";
 import { useHover, graphCanvas } from "./hover";
 import { inks, mixHex, authorColor, groupColor } from "./colors";
 import { fileComplexity } from "../../../packages/core/src/insights";
+import { impactOf } from "../../../packages/core/src/impact";
+import { planLayout } from "../../../packages/core/src/plan";
 // Drafting marks: a stroked circle with a centre dot on a paper-filled disc. mark=1 draws a scalloped revision cloud.
 const vertex = `attribute float size; attribute float alpha; attribute float mark; attribute vec3 tint; varying vec3 vTint; varying float vAlpha; varying float vMark; varying float vPx; void main(){ vTint=tint; vAlpha=alpha; vMark=mark; vec4 mv=modelViewMatrix*vec4(position,1.); float px=clamp(size*260./-mv.z,3.,56.)*(mark>.5?1.7:1.); vPx=px; gl_PointSize=px; gl_Position=projectionMatrix*mv; }`;
 // mark: 0 plain, 1 revision cloud (eight inward-cusped arcs around a smaller mark), 2 removed file (dashed outline, no paper).
@@ -85,6 +87,8 @@ function Cloud({ layout }: { layout: Layout }) {
     lines = useRef<THREE.LineSegments>(null),
     labels = useRef<Record<string, THREE.Group | null>>({}),
     transition = useRef(0),
+    planT = useRef(0),
+    frameMaterial = useRef<THREE.LineBasicMaterial>(null),
     focusT = useRef(0),
     clock = useRef(0),
     frames = useRef({ time: 0, count: 0 }),
@@ -322,6 +326,57 @@ function Cloud({ layout }: { layout: Layout }) {
     return [...counts].sort((a, b) => b[1] - a[1]).map(([a]) => a);
   }, [history]);
   const ground = useMemo(() => new THREE.Color(ink.ground), [ink]);
+  const { impactDepth, dimUnchanged } = useRepo(),
+    impact = useMemo(
+      () =>
+        color === "impact" && selectedId
+          ? impactOf(snapshot, selectedId, impactDepth)
+          : null,
+      [color, selectedId, snapshot, impactDepth],
+    );
+  // Room outlines of the floor plan, drawn as one set of hairlines that fades in with the plan.
+  const plan = useMemo(() => planLayout(snapshot.nodes), [snapshot]),
+    frameGeo = useMemo(() => {
+      const g = new THREE.BufferGeometry(),
+        pos: number[] = [],
+        col: number[] = [];
+      for (const f of plan.frames) {
+        const x0 = f.x - plan.width / 2,
+          x1 = x0 + f.w,
+          y0 = plan.height / 2 - f.y,
+          y1 = y0 - f.h,
+          rgb = mixHex(
+            ink.ground,
+            f.kind === "group" ? ink.ink : ink.line,
+            f.kind === "group" ? 0.7 : f.kind === "folder" ? 0.42 : 0.2,
+          );
+        for (const [ax, ay, bx, by] of [
+          [x0, y0, x1, y0],
+          [x1, y0, x1, y1],
+          [x1, y1, x0, y1],
+          [x0, y1, x0, y0],
+        ]) {
+          pos.push(ax, ay, -0.02, bx, by, -0.02);
+          col.push(...rgb, ...rgb);
+        }
+      }
+      g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+      return g;
+    }, [plan, ink]),
+    folderLabels = useMemo(
+      () =>
+        plan.frames
+          .filter(
+            (f) =>
+              f.kind === "folder" && f.depth === 1 && f.w > 2.2 && f.h > 1.2,
+          )
+          .sort((a, b) => b.w * b.h - a.w * a.h)
+          .slice(0, 28),
+      [plan],
+    ),
+    [showPlanLabels, setShowPlanLabels] = useState(false);
+  useEffect(() => () => frameGeo.dispose(), [frameGeo]);
   const uniforms = useMemo(() => ({ uGround: { value: ground } }), [ground]);
   const changed = useRepo((s) => s.diff),
     changedPaths = useMemo(
@@ -384,10 +439,30 @@ function Cloud({ layout }: { layout: Layout }) {
     lens,
     hotScore,
     rankedAuthors,
+    impact,
+    dimUnchanged,
   ]);
   useFrame((_, dt) => {
-    const target = useRepo.getState().layout === "layers" ? 1 : 0,
+    const current = useRepo.getState().layout,
+      target = current === "layers" ? 1 : 0,
+      planTarget = current === "plan" ? 1 : 0,
       t = transition.current;
+    planT.current = reducedMotion
+      ? planTarget
+      : THREE.MathUtils.damp(
+          planT.current,
+          planTarget,
+          5.1,
+          Math.min(dt, 0.05),
+        );
+    if (Math.abs(planT.current - planTarget) < 0.0005)
+      planT.current = planTarget;
+    if (planT.current > 0.6 !== showPlanLabels)
+      setShowPlanLabels(planT.current > 0.6);
+    if (frameMaterial.current) {
+      frameMaterial.current.opacity = planT.current;
+      frameMaterial.current.visible = planT.current > 0.01;
+    }
     transition.current = reducedMotion
       ? target
       : THREE.MathUtils.damp(t, target, 5.1, Math.min(dt, 0.05));
@@ -463,7 +538,10 @@ function Cloud({ layout }: { layout: Layout }) {
               n.kind !== "package" &&
               (next === "functions" ||
                 n.id === selectedId ||
-                revisionTop.has(n.id)) &&
+                revisionTop.has(n.id) ||
+                (planT.current > 0.5 &&
+                  n.kind === "file" &&
+                  next !== "packages")) &&
               p.z >= -1 &&
               p.z <= 1 &&
               Math.abs(p.x) < 0.85 &&
@@ -482,7 +560,11 @@ function Cloud({ layout }: { layout: Layout }) {
         for (const candidate of [...headingCandidates, ...detailCandidates]
           .filter((n) => n.visible)
           .sort((a, b) => a.score - b.score)) {
-          if (accepted.length >= (size.width < 600 ? 3 : coarse ? 5 : 7)) break;
+          if (
+            accepted.length >=
+            (size.width < 600 ? 3 : coarse ? 5 : planT.current > 0.5 ? 16 : 7)
+          )
+            break;
           if (
             accepted.every(
               (a) =>
@@ -519,6 +601,7 @@ function Cloud({ layout }: { layout: Layout }) {
       !(performance.now() - ghostStart.current < 1700 && changed) &&
       !dirty.current &&
       transition.current === target &&
+      planT.current === planTarget &&
       Math.abs(focusT.current - (focus ? 1 : 0)) < 0.001 &&
       !selectedId &&
       !focus
@@ -536,6 +619,7 @@ function Cloud({ layout }: { layout: Layout }) {
       return p
         ? scenePosition(p, id, group, {
             morph,
+            plan: planT.current,
             focus,
             focusAmount: focusT.current,
             rules: layerRules,
@@ -606,15 +690,41 @@ function Cloud({ layout }: { layout: Layout }) {
             theme,
           ),
         );
+      let fade = 0;
+      if (color === "impact") {
+        const hop = impact?.distance.get(n.id);
+        c = pick(
+          hop === undefined
+            ? ink.muted
+            : hop === 0
+              ? ink.select
+              : hop === 1
+                ? ink.revision
+                : hop === 2
+                  ? ink.ink
+                  : ink.line,
+        );
+        if (hop === undefined) fade = 0.55;
+      }
+      if (
+        color === "changes" &&
+        dimUnchanged &&
+        changed &&
+        !changedPaths.has(n.path) &&
+        !ghostIds.has(n.id)
+      )
+        fade = 0.8;
       if (ghostIds.has(n.id)) c = pick(ink.revision);
       const active = n.id === selectedId || n.parent === selectedId,
-        dim = focus && focus !== n.group?.toString() ? 0.76 : 0;
+        dim = Math.max(fade, focus && focus !== n.group?.toString() ? 0.76 : 0);
       const tint = active
         ? new THREE.Color(ink.select)
         : dim
           ? c.clone().lerp(ground, dim)
           : c;
       tints.set([tint.r, tint.g, tint.b], i * 3);
+      // Faded marks also lose their paper fill, so they recede instead of punching holes in the linework.
+      if (fade && !active) alphas[i] *= 1 - fade * 0.85;
       marks[i] = active ? 0 : ghostIds.has(n.id) ? 2 : marked;
       sizes[i] =
         (n.kind === "package"
@@ -650,8 +760,33 @@ function Cloud({ layout }: { layout: Layout }) {
         active = e.source === selectedId || e.target === selectedId;
       lp.set(pos.subarray(a * 3, a * 3 + 3), i * 6);
       lp.set(pos.subarray(b * 3, b * 3 + 3), i * 6 + 3);
-      const power = active ? 0.95 : lens === "dependencies" ? 0.42 : 0.2,
-        rgb = mixHex(ink.ground, active ? ink.select : ink.line, power);
+      const reached =
+          color === "impact" &&
+          impact?.distance.has(e.source) &&
+          impact.distance.has(e.target),
+        quiet =
+          (color === "impact" && !reached) ||
+          (color === "changes" &&
+            dimUnchanged &&
+            !!changed &&
+            !changedPaths.has(nodes[a]?.path) &&
+            !changedPaths.has(nodes[b]?.path)),
+        power =
+          (active
+            ? 0.95
+            : reached
+              ? 0.7
+              : quiet
+                ? 0.06
+                : lens === "dependencies"
+                  ? 0.42
+                  : 0.2) *
+          (1 - 0.8 * planT.current * (active || reached ? 0 : 1)),
+        rgb = mixHex(
+          ink.ground,
+          active ? ink.select : reached ? ink.revision : ink.line,
+          power,
+        );
       lc.set([...rgb, ...rgb], i * 6);
     }
     const activeLinks = links
@@ -689,7 +824,11 @@ function Cloud({ layout }: { layout: Layout }) {
       const label = labels.current[group];
       if (!label) continue;
       const p = position(`pkg:${group}`, group);
-      label.position.set(p[0], p[1] + (1 - morph) * 2.9, p[2]);
+      label.position.set(
+        p[0],
+        p[1] + (1 - morph) * 2.9 * (1 - planT.current),
+        p[2],
+      );
     }
   });
   return (
@@ -728,6 +867,34 @@ function Cloud({ layout }: { layout: Layout }) {
       <lineSegments ref={lines} geometry={lineGeo} frustumCulled={false}>
         <lineBasicMaterial vertexColors depthWrite={false} />
       </lineSegments>
+      <lineSegments
+        geometry={frameGeo}
+        frustumCulled={false}
+        raycast={() => {}}
+      >
+        <lineBasicMaterial
+          ref={frameMaterial}
+          vertexColors
+          transparent
+          opacity={0}
+          visible={false}
+          depthWrite={false}
+        />
+      </lineSegments>
+      {showPlanLabels &&
+        folderLabels.map((f) => (
+          <Html
+            key={f.id}
+            position={[
+              f.x - plan.width / 2 + 0.12,
+              plan.height / 2 - f.y - 0.16,
+              0,
+            ]}
+            zIndexRange={[2, 0]}
+          >
+            <span className="plan-label">{f.label}/</span>
+          </Html>
+        ))}
       {labelIds.map((id) => {
         const n = nodes.find((n) => n.id === id);
         if (!n) return null;
@@ -821,7 +988,11 @@ function Camera({ layout }: { layout: Layout }) {
     } = useRepo();
   function move(target: THREE.Vector3, distance: number, front = false) {
     const offset = front
-      ? new THREE.Vector3(0, mode === "layers" ? 0.8 : 0.04, 1).normalize()
+      ? new THREE.Vector3(
+          0,
+          mode === "layers" ? 0.8 : mode === "plan" ? 0 : 0.04,
+          1,
+        ).normalize()
       : camera.position
           .clone()
           .sub(controls.current?.target ?? new THREE.Vector3())
@@ -855,6 +1026,7 @@ function Camera({ layout }: { layout: Layout }) {
           new THREE.Vector3().fromArray(
             scenePosition(p, n.id, n.group, {
               morph: mode === "layers" ? 1 : 0,
+              plan: mode === "plan" ? 1 : 0,
               focus,
               rules: layerRules,
             }),
@@ -944,6 +1116,7 @@ function Camera({ layout }: { layout: Layout }) {
       target = new THREE.Vector3().fromArray(
         scenePosition(p, id!, n?.group ?? "", {
           morph: mode === "layers" ? 1 : 0,
+          plan: mode === "plan" ? 1 : 0,
           focus,
           rules: layerRules,
         }),
@@ -973,7 +1146,12 @@ function Camera({ layout }: { layout: Layout }) {
               cameraCommand.nodeId ?? "",
               snapshot.nodes.find((n) => n.id === cameraCommand.nodeId)
                 ?.group ?? "",
-              { morph: mode === "layers" ? 1 : 0, focus, rules: layerRules },
+              {
+                morph: mode === "layers" ? 1 : 0,
+                plan: mode === "plan" ? 1 : 0,
+                focus,
+                rules: layerRules,
+              },
             ),
           ),
           7,
