@@ -35,6 +35,20 @@ function linear([r, g, b]: [number, number, number]): [number, number, number] {
   const c = new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace);
   return [c.r, c.g, c.b];
 }
+/** Rendered width of a detail label: measured with the label font so placement never underestimates it. */
+const labelWidths = new Map<string, number>();
+let measure: CanvasRenderingContext2D | null | undefined;
+function labelWidth(text: string) {
+  const known = labelWidths.get(text);
+  if (known !== undefined) return known;
+  measure ??= document.createElement("canvas").getContext("2d");
+  if (measure) measure.font = '11px "JetBrains Mono", ui-monospace, monospace';
+  const width = Math.ceil(
+    (measure?.measureText(text).width ?? text.length * 6.8) + 10,
+  );
+  labelWidths.set(text, width);
+  return width;
+}
 const vertex = `attribute float size; attribute float alpha; attribute float mark; attribute vec3 tint; varying vec3 vTint; varying float vAlpha; varying float vMark; varying float vPx; void main(){ vTint=tint; vAlpha=alpha; vMark=mark; vec4 mv=modelViewMatrix*vec4(position,1.); float px=clamp(size*260./-mv.z,3.,56.)*(mark>.5?1.7:1.); vPx=px; gl_PointSize=px; gl_Position=projectionMatrix*mv; }`;
 // mark: 0 plain, 1 revision cloud (eight inward-cusped arcs around a smaller mark), 2 removed file (dashed outline, no paper).
 const fragment = `uniform vec3 uGround; varying vec3 vTint; varying float vAlpha; varying float vMark; varying float vPx; void main(){ vec2 q=gl_PointCoord-vec2(.5); float d=length(q)*2.; if(d>1.)discard; float aa=2.2/max(vPx,3.); float a=atan(q.y,q.x); float r=vMark>.5&&vMark<1.5?.5:1.; float ring=smoothstep(r*.74-aa,r*.74,d)*(1.-smoothstep(r*.88,r*.88+aa,d)); float dotc=1.-smoothstep(r*.26,r*.26+aa,d); float paper=1.-smoothstep(r*.7,r*.7+aa,d); float cloud=0.; if(vMark>.5&&vMark<1.5){ float s=.8+.14*abs(sin(a*4.)); cloud=smoothstep(s-.08-aa,s-.08,d)*(1.-smoothstep(s,s+aa,d)); } if(vMark>1.5){ ring*=step(.5,fract(a*1.9099)); dotc=0.; paper=0.; } float ink=max(max(ring,dotc),cloud); float alpha=max(ink,paper*.92)*vAlpha; if(alpha<.01)discard; gl_FragColor=vec4(mix(uGround,vTint,ink),alpha); }`;
@@ -620,9 +634,13 @@ function Cloud({ layout }: { layout: Layout }) {
             id: n.id,
             x: ((p.x + 1) * size.width) / 2,
             y: ((1 - p.y) * size.height) / 2,
-            width: revisionTop.has(n.id)
-              ? Math.min(200, 70 + n.name.length * 7)
-              : Math.min(136, 16 + n.name.length * 6),
+            width: labelWidth(
+              `${n.kind === "function" ? "ƒ " : ""}${revisionTop.has(n.id) ? "Δ" : ""}${n.name}${
+                revisionTop.has(n.id) && history?.files.get(n.path)
+                  ? ` rev ${history.files.get(n.path)!.changes}`
+                  : ""
+              }`,
+            ),
             height: 22,
             score:
               n.id === selectedId
