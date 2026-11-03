@@ -1,158 +1,1025 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-02T13:43:48.199278+00:00",
+  "generatedAt": "2026-11-03T07:34:06.177369+00:00",
   "title": "Design System: repo-view",
   "extensions": {
-    "typographyMeta": {
-      "body": {
-        "displayName": "Interface",
-        "purpose": "Self-hosted Inter Variable for the instrument frame."
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Prussian Ground",
+        "canonical": "#0f3157",
+        "tonalRamp": [
+          "#060c13",
+          "#172638",
+          "#2b4361",
+          "#40638d",
+          "#6185b1",
+          "#8ba8ca",
+          "#b8cbe3",
+          "#e6effb"
+        ]
       },
-      "code": {
-        "displayName": "Technical metadata",
-        "purpose": "Self-hosted JetBrains Mono for code, paths, shortcuts, and measurements."
+      "ground-deep": {
+        "role": "neutral",
+        "displayName": "Deep Prussian (bars)",
+        "canonical": "#0b2747",
+        "tonalRamp": [
+          "#070c12",
+          "#192635",
+          "#2e435d",
+          "#466388",
+          "#6685ab",
+          "#8fa7c5",
+          "#bbcbdf",
+          "#e7eff9"
+        ]
+      },
+      "sheet": {
+        "role": "neutral",
+        "displayName": "Sheet Blue",
+        "canonical": "#0d2c4f",
+        "tonalRamp": [
+          "#070c12",
+          "#182636",
+          "#2d435f",
+          "#43638a",
+          "#6385ae",
+          "#8da7c8",
+          "#b9cbe1",
+          "#e7effa"
+        ]
+      },
+      "sheet-raise": {
+        "role": "neutral",
+        "displayName": "Raised Sheet (tips)",
+        "canonical": "#13406e",
+        "tonalRamp": [
+          "#050c14",
+          "#14263b",
+          "#254466",
+          "#376494",
+          "#5885b9",
+          "#85a8d0",
+          "#b4cce7",
+          "#e5f0fd"
+        ]
+      },
+      "field": {
+        "role": "neutral",
+        "displayName": "Field Blue",
+        "canonical": "#0b2747",
+        "tonalRamp": [
+          "#070c12",
+          "#192635",
+          "#2e435d",
+          "#466388",
+          "#6685ab",
+          "#8fa7c5",
+          "#bbcbdf",
+          "#e7eff9"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Hairline Rule",
+        "canonical": "rgba(238, 245, 255, 0.17)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#232529",
+          "#3e4248",
+          "#5c626a",
+          "#7d838c",
+          "#a0a5ac",
+          "#c6c9ce",
+          "#edeef1"
+        ]
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "Strong Rule",
+        "canonical": "rgba(238, 245, 255, 0.34)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#232529",
+          "#3e4248",
+          "#5c626a",
+          "#7d838c",
+          "#a0a5ac",
+          "#c6c9ce",
+          "#edeef1"
+        ]
+      },
+      "grid": {
+        "role": "neutral",
+        "displayName": "Drafting Grid Minor",
+        "canonical": "rgba(238, 245, 255, 0.05)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#232529",
+          "#3e4248",
+          "#5c626a",
+          "#7d838c",
+          "#a0a5ac",
+          "#c6c9ce",
+          "#edeef1"
+        ]
+      },
+      "grid-major": {
+        "role": "neutral",
+        "displayName": "Drafting Grid Major",
+        "canonical": "rgba(238, 245, 255, 0.085)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#232529",
+          "#3e4248",
+          "#5c626a",
+          "#7d838c",
+          "#a0a5ac",
+          "#c6c9ce",
+          "#edeef1"
+        ]
+      },
+      "scrim": {
+        "role": "neutral",
+        "displayName": "Prussian Scrim",
+        "canonical": "rgba(7, 26, 48, 0.72)",
+        "tonalRamp": [
+          "#080b10",
+          "#1d2631",
+          "#344356",
+          "#4d637e",
+          "#6e84a0",
+          "#95a7bd",
+          "#becad9",
+          "#e9eff6"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Linework White",
+        "canonical": "#eef5ff",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#232529",
+          "#3e4248",
+          "#5c626a",
+          "#7d838c",
+          "#a0a5ac",
+          "#c6c9ce",
+          "#edeef1"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Second Ink",
+        "canonical": "#c2d6ec",
+        "tonalRamp": [
+          "#090b0f",
+          "#1e262e",
+          "#374351",
+          "#526376",
+          "#728499",
+          "#98a7b7",
+          "#c1cad5",
+          "#eaeff4"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Label Ink",
+        "canonical": "#93b3d6",
+        "tonalRamp": [
+          "#070c11",
+          "#1a2633",
+          "#2f445a",
+          "#466483",
+          "#6785a6",
+          "#90a8c2",
+          "#bbcbdd",
+          "#e8eff8"
+        ]
+      },
+      "graph-line": {
+        "role": "neutral",
+        "displayName": "Edge Linework",
+        "canonical": "#a9c3df",
+        "tonalRamp": [
+          "#080c10",
+          "#1c2630",
+          "#334455",
+          "#4c647c",
+          "#6d859f",
+          "#94a7bc",
+          "#becbd9",
+          "#e9eff6"
+        ]
+      },
+      "graph-muted": {
+        "role": "neutral",
+        "displayName": "Unmarked Node Ink",
+        "canonical": "#6f93bb",
+        "tonalRamp": [
+          "#060c12",
+          "#182636",
+          "#2c445e",
+          "#426489",
+          "#6285ad",
+          "#8ca8c7",
+          "#b9cbe0",
+          "#e7f0fa"
+        ]
+      },
+      "chrome-yellow": {
+        "role": "primary",
+        "displayName": "Chrome Yellow",
+        "canonical": "#ffd45c",
+        "tonalRamp": [
+          "#110a00",
+          "#332200",
+          "#593d00",
+          "#825a00",
+          "#a57c00",
+          "#c0a24e",
+          "#dcc894",
+          "#f7eed6"
+        ]
+      },
+      "chrome-yellow-hover": {
+        "role": "primary",
+        "displayName": "Chrome Yellow Hover",
+        "canonical": "#ffe08a",
+        "tonalRamp": [
+          "#0f0b01",
+          "#2f2300",
+          "#533f00",
+          "#795d00",
+          "#9c7f24",
+          "#b9a366",
+          "#d7c8a1",
+          "#f5eedc"
+        ]
+      },
+      "chrome-yellow-soft": {
+        "role": "primary",
+        "displayName": "Chrome Yellow Wash",
+        "canonical": "rgba(255, 212, 92, 0.14)",
+        "tonalRamp": [
+          "#110a00",
+          "#332200",
+          "#593d00",
+          "#825a00",
+          "#a57c00",
+          "#c0a24e",
+          "#dcc894",
+          "#f7eed6"
+        ]
+      },
+      "act-ink": {
+        "role": "primary",
+        "displayName": "Ink on Chrome Yellow",
+        "canonical": "#10263f",
+        "tonalRamp": [
+          "#080c10",
+          "#1c2632",
+          "#324358",
+          "#4b6380",
+          "#6b85a3",
+          "#93a7bf",
+          "#bdcbdb",
+          "#e9eff7"
+        ]
+      },
+      "correction-red": {
+        "role": "secondary",
+        "displayName": "Correction Red",
+        "canonical": "#ff8a75",
+        "tonalRamp": [
+          "#170604",
+          "#41140d",
+          "#712519",
+          "#a43827",
+          "#cb5b48",
+          "#e28a7a",
+          "#f4b8ad",
+          "#ffe7e1"
+        ]
+      },
+      "addition-mint": {
+        "role": "secondary",
+        "displayName": "Addition Mint",
+        "canonical": "#8ff0c8",
+        "tonalRamp": [
+          "#020e09",
+          "#022d1f",
+          "#004f37",
+          "#007452",
+          "#319773",
+          "#71b699",
+          "#a9d5c1",
+          "#e0f4ea"
+        ]
+      },
+      "group-sky": {
+        "role": "tertiary",
+        "displayName": "Sky Group Ink",
+        "canonical": "#9fe3ff",
+        "tonalRamp": [
+          "#040d11",
+          "#0d2933",
+          "#18485a",
+          "#256a83",
+          "#4a8ca6",
+          "#7dadc1",
+          "#b0cfdc",
+          "#e3f1f8"
+        ]
+      },
+      "group-lilac": {
+        "role": "tertiary",
+        "displayName": "Lilac Group Ink",
+        "canonical": "#c9b6ff",
+        "tonalRamp": [
+          "#0c0914",
+          "#271f3b",
+          "#463866",
+          "#675495",
+          "#8875b9",
+          "#a99bd1",
+          "#cbc3e7",
+          "#efecfd"
+        ]
+      },
+      "group-sand": {
+        "role": "tertiary",
+        "displayName": "Sand Group Ink",
+        "canonical": "#e9d8a6",
+        "tonalRamp": [
+          "#0e0b05",
+          "#2b2511",
+          "#4c4120",
+          "#6f6031",
+          "#918152",
+          "#b1a481",
+          "#d1c9b1",
+          "#f2eee3"
+        ]
+      },
+      "group-salmon": {
+        "role": "tertiary",
+        "displayName": "Salmon Group Ink",
+        "canonical": "#ffb59e",
+        "tonalRamp": [
+          "#130805",
+          "#381d14",
+          "#613426",
+          "#8d4d39",
+          "#b26e59",
+          "#cc9685",
+          "#e5c0b4",
+          "#fceae4"
+        ]
+      },
+      "group-periwinkle": {
+        "role": "tertiary",
+        "displayName": "Periwinkle Group Ink",
+        "canonical": "#9db4ff",
+        "tonalRamp": [
+          "#070a16",
+          "#1b233f",
+          "#313e6e",
+          "#4a5ca0",
+          "#697ec5",
+          "#91a3da",
+          "#bbc8ee",
+          "#e8eeff"
+        ]
+      },
+      "wp-ground": {
+        "role": "neutral",
+        "displayName": "Whiteprint Paper",
+        "canonical": "#edf1f5",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242527",
+          "#404245",
+          "#5e6265",
+          "#7f8386",
+          "#a2a5a8",
+          "#c7c9cb",
+          "#eeeeef"
+        ]
+      },
+      "wp-ground-deep": {
+        "role": "neutral",
+        "displayName": "Whiteprint Bars",
+        "canonical": "#e1e8ef",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#232528",
+          "#3e4247",
+          "#5c6268",
+          "#7d8389",
+          "#a1a6ab",
+          "#c6c9cd",
+          "#edeff0"
+        ]
+      },
+      "wp-sheet": {
+        "role": "neutral",
+        "displayName": "Whiteprint Sheet",
+        "canonical": "#f8fafc",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242526",
+          "#414243",
+          "#606163",
+          "#818284",
+          "#a4a5a6",
+          "#c8c9ca",
+          "#eeeeef"
+        ]
+      },
+      "wp-sheet-raise": {
+        "role": "neutral",
+        "displayName": "Whiteprint Raised Sheet",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "wp-rule": {
+        "role": "neutral",
+        "displayName": "Whiteprint Hairline",
+        "canonical": "rgba(18, 48, 90, 0.16)",
+        "tonalRamp": [
+          "#060b13",
+          "#182539",
+          "#2c4363",
+          "#426290",
+          "#6284b4",
+          "#8ca7cd",
+          "#b9cbe4",
+          "#e7effc"
+        ]
+      },
+      "wp-rule-strong": {
+        "role": "neutral",
+        "displayName": "Whiteprint Strong Rule",
+        "canonical": "rgba(18, 48, 90, 0.34)",
+        "tonalRamp": [
+          "#060b13",
+          "#182539",
+          "#2c4363",
+          "#426290",
+          "#6284b4",
+          "#8ca7cd",
+          "#b9cbe4",
+          "#e7effc"
+        ]
+      },
+      "wp-grid": {
+        "role": "neutral",
+        "displayName": "Whiteprint Grid Minor",
+        "canonical": "rgba(18, 48, 90, 0.055)",
+        "tonalRamp": [
+          "#060b13",
+          "#182539",
+          "#2c4363",
+          "#426290",
+          "#6284b4",
+          "#8ca7cd",
+          "#b9cbe4",
+          "#e7effc"
+        ]
+      },
+      "wp-grid-major": {
+        "role": "neutral",
+        "displayName": "Whiteprint Grid Major",
+        "canonical": "rgba(18, 48, 90, 0.095)",
+        "tonalRamp": [
+          "#060b13",
+          "#182539",
+          "#2c4363",
+          "#426290",
+          "#6284b4",
+          "#8ca7cd",
+          "#b9cbe4",
+          "#e7effc"
+        ]
+      },
+      "wp-scrim": {
+        "role": "neutral",
+        "displayName": "Whiteprint Scrim",
+        "canonical": "rgba(237, 241, 245, 0.8)",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242527",
+          "#404245",
+          "#5e6265",
+          "#7f8386",
+          "#a2a5a8",
+          "#c7c9cb",
+          "#eeeeef"
+        ]
+      },
+      "wp-ink": {
+        "role": "neutral",
+        "displayName": "Diazo Navy",
+        "canonical": "#12305a",
+        "tonalRamp": [
+          "#060b13",
+          "#182539",
+          "#2c4363",
+          "#426290",
+          "#6284b4",
+          "#8ca7cd",
+          "#b9cbe4",
+          "#e7effc"
+        ]
+      },
+      "wp-ink-2": {
+        "role": "neutral",
+        "displayName": "Whiteprint Second Ink",
+        "canonical": "#304f78",
+        "tonalRamp": [
+          "#070b13",
+          "#182638",
+          "#2c4361",
+          "#43638d",
+          "#6384b1",
+          "#8da7ca",
+          "#b9cbe3",
+          "#e7effb"
+        ]
+      },
+      "wp-ink-3": {
+        "role": "neutral",
+        "displayName": "Whiteprint Label Ink",
+        "canonical": "#52708f",
+        "tonalRamp": [
+          "#070c11",
+          "#1a2633",
+          "#2f4459",
+          "#466482",
+          "#6786a5",
+          "#90a8c1",
+          "#bbcbdc",
+          "#e8eff8"
+        ]
+      },
+      "wp-graph-line": {
+        "role": "neutral",
+        "displayName": "Whiteprint Edge Linework",
+        "canonical": "#4f6a8a",
+        "tonalRamp": [
+          "#070c11",
+          "#1b2633",
+          "#31435a",
+          "#496383",
+          "#6985a6",
+          "#91a7c2",
+          "#bccbdd",
+          "#e8eff8"
+        ]
+      },
+      "wp-graph-muted": {
+        "role": "neutral",
+        "displayName": "Whiteprint Unmarked Node Ink",
+        "canonical": "#93a8c0",
+        "tonalRamp": [
+          "#080b0f",
+          "#1e262f",
+          "#364353",
+          "#506379",
+          "#70849b",
+          "#97a7b9",
+          "#c0cad7",
+          "#eaeff5"
+        ]
+      },
+      "wp-chrome-yellow-hover": {
+        "role": "primary",
+        "displayName": "Whiteprint Chrome Yellow Hover",
+        "canonical": "#ffca2e",
+        "tonalRamp": [
+          "#120a00",
+          "#352100",
+          "#5d3b00",
+          "#885700",
+          "#ab7900",
+          "#c6a03a",
+          "#dfc78b",
+          "#f9eed2"
+        ]
+      },
+      "wp-chrome-yellow-soft": {
+        "role": "primary",
+        "displayName": "Whiteprint Chrome Yellow Wash",
+        "canonical": "rgba(255, 196, 30, 0.22)",
+        "tonalRamp": [
+          "#120900",
+          "#372000",
+          "#603900",
+          "#8b5400",
+          "#af7700",
+          "#c99e37",
+          "#e2c68a",
+          "#faedd2"
+        ]
+      },
+      "wp-select-ink": {
+        "role": "primary",
+        "displayName": "Whiteprint Select Gold",
+        "canonical": "#b87a00",
+        "tonalRamp": [
+          "#130900",
+          "#381f00",
+          "#613700",
+          "#8d5200",
+          "#b17400",
+          "#cb9b5a",
+          "#e3c39a",
+          "#fbecd9"
+        ]
+      },
+      "wp-correction-red": {
+        "role": "secondary",
+        "displayName": "Whiteprint Correction Red",
+        "canonical": "#c8402a",
+        "tonalRamp": [
+          "#190402",
+          "#460e06",
+          "#791909",
+          "#af260f",
+          "#d74e38",
+          "#ec836f",
+          "#fcb5a6",
+          "#ffe5de"
+        ]
+      },
+      "wp-addition-green": {
+        "role": "secondary",
+        "displayName": "Whiteprint Addition Green",
+        "canonical": "#0d7a58",
+        "tonalRamp": [
+          "#030e09",
+          "#042d1f",
+          "#014f37",
+          "#007352",
+          "#379672",
+          "#74b599",
+          "#abd4c1",
+          "#e0f4ea"
+        ]
+      },
+      "wp-group-blue": {
+        "role": "tertiary",
+        "displayName": "Whiteprint Blue Group Ink",
+        "canonical": "#1d6fb8",
+        "tonalRamp": [
+          "#030c18",
+          "#052644",
+          "#064376",
+          "#0963ab",
+          "#3886d1",
+          "#72aae4",
+          "#a9cdf4",
+          "#dff1ff"
+        ]
+      },
+      "wp-group-violet": {
+        "role": "tertiary",
+        "displayName": "Whiteprint Violet Group Ink",
+        "canonical": "#6b4fb0",
+        "tonalRamp": [
+          "#0c0818",
+          "#281c45",
+          "#463377",
+          "#674bac",
+          "#886ed2",
+          "#a997e5",
+          "#cbc1f5",
+          "#efebff"
+        ]
+      },
+      "wp-group-ochre": {
+        "role": "tertiary",
+        "displayName": "Whiteprint Ochre Group Ink",
+        "canonical": "#8a6a1f",
+        "tonalRamp": [
+          "#100a02",
+          "#302305",
+          "#543e06",
+          "#7b5c08",
+          "#9e7d35",
+          "#bba26f",
+          "#d8c7a6",
+          "#f6eede"
+        ]
+      },
+      "wp-group-rust": {
+        "role": "tertiary",
+        "displayName": "Whiteprint Rust Group Ink",
+        "canonical": "#a4452f",
+        "tonalRamp": [
+          "#160604",
+          "#3f170e",
+          "#6d2a1b",
+          "#9e3f29",
+          "#c4624a",
+          "#dc8e7b",
+          "#f0bbad",
+          "#ffe8e1"
+        ]
+      },
+      "wp-group-slate": {
+        "role": "tertiary",
+        "displayName": "Whiteprint Slate Group Ink",
+        "canonical": "#3f5f8f",
+        "tonalRamp": [
+          "#060b14",
+          "#18253a",
+          "#2c4265",
+          "#426292",
+          "#6284b6",
+          "#8ca7ce",
+          "#b9cbe5",
+          "#e6effc"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Start-screen headline only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Analysis workspace titles."
+      },
+      "title-lg": {
+        "displayName": "Title Large",
+        "purpose": "Inspector entity name."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Lens card heading and lens tab names."
+      },
+      "lead": {
+        "displayName": "Lead",
+        "purpose": "The one-sentence answer at the top of the lens card."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default interface text."
+      },
+      "body-sm": {
+        "displayName": "Body Small",
+        "purpose": "Legends, notes and secondary lines in ink-3."
+      },
+      "label": {
+        "displayName": "Title-block Label",
+        "purpose": "Barlow Condensed tracked uppercase: panel, section, field and title-block cell labels beside their data."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Paths, SHAs, branches, node labels, kbd and the spine scale."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Tabular counts and property values."
       }
     },
     "shadows": [
       {
-        "name": "search-results",
-        "value": "0 12px 36px #0008",
-        "purpose": "Search result overlay."
-      },
-      {
-        "name": "settings",
-        "value": "0 14px 38px #0008",
-        "purpose": "Floating settings panel."
+        "name": "none",
+        "value": "none",
+        "purpose": "The system is flat: --shadow is none; 1px rules separate every sheet."
       }
     ],
     "motion": [
       {
-        "name": "morph",
-        "value": "damp(5.1); dt <= 0.05s; settle < 0.0005",
-        "purpose": "Reversible Cloud/Layers interpolation, approximately 1.5s to settle; immediate with Reduced Motion."
+        "name": "morph-damp",
+        "value": "THREE.MathUtils.damp rate 5.1, dt capped 0.05s, settle at 0.0005",
+        "purpose": "Cloud/Layers morph of the one persistent graph."
       },
       {
-        "name": "local-focus",
-        "value": "damp(4)",
-        "purpose": "Unfold one group while preserving surrounding positions."
+        "name": "focus-damp",
+        "value": "damp rate 4, dt capped 0.05s",
+        "purpose": "Local group focus unfolding."
       },
       {
-        "name": "reduced-motion-css",
-        "value": "0.001ms",
-        "purpose": "CSS transition and animation duration under prefers-reduced-motion."
+        "name": "camera-ease",
+        "value": "alpha = 1 - exp(-8 * min(dt, 0.1))",
+        "purpose": "Camera target and position easing; immediate under reduced motion."
       },
       {
-        "name": "camera",
-        "value": "1.1s; smoothing 1 - exp(-8 * min(dt, 0.1))",
-        "purpose": "Interrupted by user camera interaction; immediate under Reduced Motion."
+        "name": "change-pulse",
+        "value": "1700ms sine size pulse",
+        "purpose": "Changed files briefly swell after a revision opens; removed under reduced motion."
+      },
+      {
+        "name": "ghost-fade",
+        "value": "1500ms linear alpha",
+        "purpose": "Removed files fade out and additions fade in outside Evolution; immediate under reduced motion."
+      },
+      {
+        "name": "tree-chevron",
+        "value": "transform 0.15s",
+        "purpose": "Files tree folder chevron."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation/transition-duration 0.001ms",
+        "purpose": "prefers-reduced-motion or the Reduced motion setting."
       }
     ],
     "breakpoints": [
       {
-        "name": "compact-chrome",
-        "value": "max-width: 1360px"
+        "name": "wide",
+        "value": "1360px"
       },
       {
-        "name": "panel-drawers",
-        "value": "max-width: 1199px"
+        "name": "compact",
+        "value": "1100px"
       },
       {
-        "name": "mobile",
-        "value": "max-width: 760px"
+        "name": "health-word",
+        "value": "880px"
       },
       {
-        "name": "narrow-mobile",
-        "value": "max-width: 430px"
+        "name": "phone",
+        "value": "760px"
       },
       {
-        "name": "compact-height",
-        "value": "max-height: 650px"
+        "name": "narrow",
+        "value": "420px"
+      },
+      {
+        "name": "short",
+        "value": "max-height 640px"
+      },
+      {
+        "name": "coarse",
+        "value": "pointer: coarse (controls 44px)"
       }
-    ],
-    "spatialAnnotations": {
-      "fontSize": "10px",
-      "minHeight": "22px",
-      "maxWidth": "136px",
-      "background": "#0815228c",
-      "collisionPool": "shared package/detail labels; selected nodes first",
-      "touchAlternative": "26px point-picking radius plus Files/search"
-    }
+    ]
   },
   "components": [
     {
-      "name": "Primary button",
+      "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Compact blue action surface.",
-      "html": "<button class=\"ds-primary\">Apply layer assignments</button>",
-      "css": ".ds-primary{display:inline-flex;align-items:center;justify-content:center;font:12px \"Inter Variable\",sans-serif;color:#e0f3ff;background:#16405b;border:1px solid #3e789e;border-radius:6px;min-height:40px;padding:10px 15px;cursor:pointer}.ds-primary:hover{background:#205575;color:#fff}.ds-primary:focus-visible{outline:2px solid var(--cyan,#68caff);outline-offset:3px}.ds-primary:disabled{opacity:.4;cursor:not-allowed}"
+      "description": "The one forward action in a context; chrome yellow because it can be pressed.",
+      "html": "<button class=\"ds-btn-primary\">Open repository</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 16px;border:0;border-radius:3px;background:var(--act,#ffd45c);color:var(--act-ink,#10263f);font:600 14px/1.4 Barlow,'Helvetica Neue',Arial,sans-serif;cursor:pointer}.ds-btn-primary:hover{background:var(--act-hover,#ffe08a)}.ds-btn-primary:focus-visible{outline:2px solid var(--focus,#ffd45c);outline-offset:2px}"
     },
     {
-      "name": "Icon button",
+      "name": "Secondary Button",
       "kind": "button",
-      "refersTo": "icon-button",
-      "description": "Compact graph and panel action.",
-      "html": "<button class=\"ds-icon\" aria-label=\"Fit cloud\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path d=\"M3 11a9 9 0 1 1 2.6 7M3 4v7h7\"/></svg></button>",
-      "css": ".ds-icon{width:var(--control,36px);height:var(--control,36px);display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:6px;color:#9fb6ce;background:none;cursor:pointer}.ds-icon:hover{background:#183048;color:#8ed9ff}.ds-icon:focus-visible{outline:2px solid var(--cyan,#68caff);outline-offset:3px}@media(max-width:1199px){.ds-icon{width:42px;height:42px}}@media(pointer:coarse){.ds-icon{width:44px;height:44px}}"
+      "refersTo": "button-secondary",
+      "description": "Export, Share, Back to cloud: a hairline-framed control in ink.",
+      "html": "<button class=\"ds-btn-secondary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><path d=\"M7 10l5 5 5-5\"/><path d=\"M12 15V3\"/></svg>Export</button>",
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 11px;background:none;border:1px solid var(--rule-strong,rgba(238,245,255,.34));border-radius:3px;color:var(--ink,#eef5ff);font:400 14px/1.4 Barlow,'Helvetica Neue',Arial,sans-serif;cursor:pointer}.ds-btn-secondary:hover{border-color:var(--ink-2,#c2d6ec);background:var(--rule,rgba(238,245,255,.17))}.ds-btn-secondary:focus-visible{outline:2px solid var(--focus,#ffd45c);outline-offset:2px}"
     },
     {
-      "name": "Repository field",
+      "name": "Cloud / Layers Segmented",
+      "kind": "chip",
+      "refersTo": "segmented-choice-active",
+      "description": "Two targets for the same graph; the chosen one fills chrome yellow.",
+      "html": "<div class=\"ds-seg\"><button class=\"ds-seg-on\" aria-pressed=\"true\">Cloud</button><button aria-pressed=\"false\">Layers</button></div>",
+      "css": ".ds-seg{display:inline-flex;gap:2px;padding:2px;border:1px solid var(--rule-strong,rgba(238,245,255,.34));border-radius:3px;background:var(--ground-deep,#0b2747)}.ds-seg button{height:28px;padding:0 11px;border:0;border-radius:2px;background:none;color:var(--ink-2,#c2d6ec);font:400 14px Barlow,sans-serif;cursor:pointer}.ds-seg button:hover{color:var(--ink,#eef5ff);background:var(--rule,rgba(238,245,255,.17))}.ds-seg button.ds-seg-on{background:var(--act,#ffd45c);color:var(--act-ink,#10263f);font-weight:600}.ds-seg button:focus-visible{outline:2px solid var(--focus,#ffd45c);outline-offset:2px}"
+    },
+    {
+      "name": "Lens Bar",
+      "kind": "nav",
+      "refersTo": "lens-tab",
+      "description": "Lens tabs: name over question, hairline-divided; the active lens fills chrome yellow.",
+      "html": "<nav class=\"ds-lenses\"><button class=\"ds-lens\"><b>Architecture</b><small>How is it organized?</small></button><button class=\"ds-lens ds-lens-on\"><b>Evolution</b><small>What changed, when?</small></button><button class=\"ds-lens\"><b>Hotspots</b><small>Where is the risk?</small></button></nav>",
+      "css": ".ds-lenses{display:flex;height:56px;background:var(--ground-deep,#0b2747);border-bottom:1px solid var(--rule-strong,rgba(238,245,255,.34))}.ds-lens{display:grid;align-content:center;gap:1px;padding:0 18px;border:0;border-right:1px solid var(--rule,rgba(238,245,255,.17));background:none;text-align:left;color:var(--ink-3,#93b3d6);font-family:Barlow,sans-serif;cursor:pointer}.ds-lens b{font-weight:500;font-size:15px;color:var(--ink,#eef5ff)}.ds-lens small{font-size:12.5px}.ds-lens:hover:not(.ds-lens-on){background:var(--rule,rgba(238,245,255,.17))}.ds-lens.ds-lens-on{background:var(--act,#ffd45c);color:var(--act-ink,#10263f)}.ds-lens.ds-lens-on b{color:var(--act-ink,#10263f);font-weight:600}.ds-lens:focus-visible{outline:2px solid var(--focus,#ffd45c);outline-offset:-2px}"
+    },
+    {
+      "name": "Command Field",
       "kind": "input",
       "refersTo": "input",
-      "description": "Dark field for repository input and settings.",
-      "html": "<input class=\"ds-field\" aria-label=\"Repository URL\" placeholder=\"https://github.com/owner/repository\">",
-      "css": ".ds-field{font:13px \"Inter Variable\",sans-serif;color:#e1ecf6;background:#0c1826;border:1px solid #34506a;border-radius:6px;padding:10px 12px;caret-color:var(--cyan,#68caff)}.ds-field::placeholder{color:#91a8c0}.ds-field:focus-visible{outline:2px solid var(--cyan,#68caff);outline-offset:3px}"
+      "description": "The centred ⌘K field on the field fill with a hairline frame.",
+      "html": "<label class=\"ds-cmd\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"M21 21l-4.3-4.3\"/></svg><input placeholder=\"Go to file, function, commit or action…\"><kbd>⌘K</kbd></label>",
+      "css": ".ds-cmd{display:flex;align-items:center;gap:8px;height:36px;width:420px;padding:0 10px;border:1px solid var(--rule-strong,rgba(238,245,255,.34));border-radius:3px;background:var(--field,#0b2747);color:var(--ink-3,#93b3d6)}.ds-cmd:focus-within{border-color:var(--ink-2,#c2d6ec)}.ds-cmd input{flex:1;min-width:0;border:0;background:none;outline:none;padding:0;color:var(--ink,#eef5ff);caret-color:var(--act,#ffd45c);font:400 14px Barlow,sans-serif}.ds-cmd input::placeholder{color:var(--ink-3,#93b3d6)}.ds-cmd kbd{font:400 11px 'JetBrains Mono',monospace;border:1px solid var(--rule-strong,rgba(238,245,255,.34));border-radius:2px;padding:1px 5px;color:var(--ink-3,#93b3d6)}"
     },
     {
-      "name": "Primary navigation",
-      "kind": "nav",
-      "description": "Closeable analysis navigation with a clear cyan active underline.",
-      "html": "<nav class=\"ds-nav\"><button class=\"ds-active\" aria-current=\"page\">Explore</button><button>Dependencies</button></nav>",
-      "css": ".ds-nav{display:flex;background:#09111c;height:58px;gap:4px}.ds-nav button{font:12px \"Inter Variable\",sans-serif;color:#a2b6cb;border:0;background:none;padding:0 12px;min-height:44px;position:relative;cursor:pointer}.ds-nav button:hover{color:#fff}.ds-nav .ds-active{color:#86d8ff}.ds-nav .ds-active:after{content:\"\";position:absolute;bottom:0;left:10px;right:10px;height:2px;background:#71d1ff}.ds-nav button:focus-visible{outline:2px solid var(--cyan,#68caff);outline-offset:3px}"
-    },
-    {
-      "name": "Morph control",
-      "kind": "custom",
-      "description": "Cloud and Layers targets for one persistent graph.",
-      "html": "<div class=\"ds-morph\"><button class=\"ds-active\" aria-pressed=\"true\">Cloud</button><span></span><button aria-pressed=\"false\">Layers</button></div>",
-      "css": ".ds-morph{display:inline-flex;align-items:center;padding:4px;border:1px solid #395d7c;border-radius:8px;background:#0b1929eb}.ds-morph button{font:12px \"Inter Variable\",sans-serif;min-height:34px;padding:0 13px;border:0;border-radius:5px;background:none;color:#a8c2db;cursor:pointer}.ds-morph button:hover{color:#fff}.ds-morph .ds-active{background:#1b4968;color:#b4e5ff;box-shadow:inset 0 0 0 1px #4e8db6}.ds-morph span{width:18px;height:1px;background:#4b7899}.ds-morph button:focus-visible{outline:2px solid var(--cyan,#68caff);outline-offset:3px}@media(pointer:coarse){.ds-morph button{min-height:44px}}"
-    },
-    {
-      "name": "Demo label",
+      "name": "Demo Tag",
       "kind": "chip",
-      "description": "Explicit non-interactive demo data marker.",
-      "html": "<span class=\"ds-demo\">DEMO</span>",
-      "css": ".ds-demo{display:inline-flex;align-items:center;width:max-content;color:#9cd3f4;background:#102a40;border:1px solid #34516a;border-radius:4px;font:9px \"JetBrains Mono\",monospace;letter-spacing:.04em;padding:4px 7px;white-space:nowrap}"
+      "refersTo": "demo-tag",
+      "description": "Status drawn in ink with a dashed border; never yellow.",
+      "html": "<span class=\"ds-demo\">Demo data</span>",
+      "css": ".ds-demo{font:600 11px/1.2 'Barlow Condensed','Arial Narrow',sans-serif;letter-spacing:.09em;text-transform:uppercase;border:1px dashed var(--ink-2,#c2d6ec);color:var(--ink,#eef5ff);border-radius:2px;padding:2px 6px;white-space:nowrap}"
+    },
+    {
+      "name": "Lens Card",
+      "kind": "card",
+      "refersTo": "lens-card",
+      "description": "Floating sheet: question, scope line, one-sentence lead, counts and ranked rows with Δ rev tags.",
+      "html": "<section class=\"ds-lenscard\"><header><h2>What changed, when?</h2></header><div class=\"ds-lc-body\"><p class=\"ds-scope\"><span>Evolution</span><span>atlas-commerce</span><span class=\"ds-m\">f62135c → 96c02dd</span></p><p class=\"ds-lead\">442 files differ from f62135c.</p><dl class=\"ds-counts\"><div><dt>Added</dt><dd>+8</dd></div><div><dt>Changed</dt><dd>434</dd></div><div><dt>Removed</dt><dd>−0</dd></div></dl><button class=\"ds-row\"><i></i><span>apps/web/pages/router.ts</span><small>Δ rev 16</small></button></div></section>",
+      "css": ".ds-lenscard{width:330px;background:var(--sheet,#0d2c4f);border:1px solid var(--rule-strong,rgba(238,245,255,.34));border-radius:3px;color:var(--ink,#eef5ff);font:400 14px/1.4 Barlow,sans-serif}.ds-lenscard header{display:flex;align-items:center;min-height:42px;padding:4px 14px;border-bottom:1px solid var(--rule,rgba(238,245,255,.17))}.ds-lenscard h2{margin:0;font-size:15px;font-weight:600}.ds-lc-body{display:grid;gap:10px;padding:12px 14px 14px}.ds-scope{margin:0;font:600 11.5px 'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3,#93b3d6)}.ds-scope span+span::before{content:'/';margin:0 6px;color:var(--rule-strong,rgba(238,245,255,.34))}.ds-scope .ds-m{font:400 12px 'JetBrains Mono',monospace;text-transform:none;letter-spacing:0}.ds-lead{margin:0;font-size:15px;line-height:1.45}.ds-counts{margin:0;display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--rule-strong,rgba(238,245,255,.34))}.ds-counts div{padding:7px 10px;border-right:1px solid var(--rule,rgba(238,245,255,.17))}.ds-counts div:last-child{border-right:0}.ds-counts dt{font:600 11px 'Barlow Condensed',sans-serif;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3,#93b3d6)}.ds-counts dd{margin:0;font:400 19px 'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}.ds-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;padding:5px 6px;border:0;border-radius:2px;background:none;color:inherit;text-align:left;cursor:pointer}.ds-row:hover{background:var(--rule,rgba(238,245,255,.17))}.ds-row i{width:10px;height:10px;border-radius:50%;background:var(--rev,#ff8a75)}.ds-row span{font:400 12px 'JetBrains Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-row small{font:400 11px 'JetBrains Mono',monospace;color:var(--rev,#ff8a75);border:1px solid var(--rev,#ff8a75);border-radius:2px;padding:0 4px}.ds-row:focus-visible{outline:2px solid var(--focus,#ffd45c);outline-offset:2px}"
+    },
+    {
+      "name": "Title Block",
+      "kind": "custom",
+      "refersTo": "title-block-cell",
+      "description": "The drawing's title block beside the time spine: ruled cells, condensed label over value.",
+      "html": "<div class=\"ds-tb\"><div class=\"ds-tb-sheet\"><span>Sheet</span><b>perf: cache repository snapshots</b></div><div><span>Revision</span><code>f62135c → 96c02dd</code></div><div><span>Drawn by</span><b>Alex Morgan</b></div><div><span>Date</span><b>9 Nov 2026</b></div><div><span>No.</span><code>40 / 50 · main</code></div></div>",
+      "css": ".ds-tb{display:grid;grid-template-columns:1fr 1fr;width:380px;background:var(--ground-deep,#0b2747);border-left:1px solid var(--rule-strong,rgba(238,245,255,.34));color:var(--ink,#eef5ff);font-family:Barlow,sans-serif}.ds-tb>div{display:grid;gap:1px;padding:6px 14px;border-bottom:1px solid var(--rule,rgba(238,245,255,.17));border-right:1px solid var(--rule,rgba(238,245,255,.17));min-width:0}.ds-tb>div:nth-child(odd):not(.ds-tb-sheet){border-right:0}.ds-tb>div:nth-last-child(-n+2){border-bottom:0}.ds-tb .ds-tb-sheet{grid-column:1/-1;border-right:0}.ds-tb span{font:600 10.5px 'Barlow Condensed',sans-serif;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3,#93b3d6)}.ds-tb b{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-tb code{font:400 12.5px 'JetBrains Mono',monospace}"
+    },
+    {
+      "name": "Node Label",
+      "kind": "custom",
+      "refersTo": "node-label",
+      "description": "On-graph callout in mono; a Δ and rev count in correction red on the most-revised files; selected takes a chrome-yellow underline.",
+      "html": "<button class=\"ds-node\"><span class=\"ds-d\">Δ</span>checkout1.ts<small>rev 16</small></button> <button class=\"ds-node ds-node-sel\">session.ts</button>",
+      "css": ".ds-node{display:inline-flex;align-items:center;gap:6px;padding:3px 7px;border-radius:2px;background:var(--sheet,#0d2c4f);border:1px solid var(--rule-strong,rgba(238,245,255,.34));color:var(--ink,#eef5ff);font:400 11px 'JetBrains Mono',monospace;cursor:pointer}.ds-node:hover{border-color:var(--ink-2,#c2d6ec)}.ds-node .ds-d{color:var(--rev,#ff8a75);font-weight:600}.ds-node small{color:var(--rev,#ff8a75);font-size:10px}.ds-node.ds-node-sel{border-color:var(--act,#ffd45c);box-shadow:inset 0 -2px var(--act,#ffd45c)}.ds-node:focus-visible{outline:2px solid var(--focus,#ffd45c);outline-offset:2px}"
+    },
+    {
+      "name": "Hover Card",
+      "kind": "card",
+      "refersTo": "hover-card",
+      "description": "Non-interactive preview: name, path, change state, condensed hint.",
+      "html": "<div class=\"ds-hover\"><b>router.ts</b><code>apps/web/pages/router.ts</code><span class=\"ds-chg\">Changed · rev 16</span><small>Click to inspect</small></div>",
+      "css": ".ds-hover{display:grid;gap:2px;max-width:300px;padding:8px 11px;background:var(--sheet,#0d2c4f);border:1px solid var(--ink-2,#c2d6ec);border-radius:3px;color:var(--ink,#eef5ff);font:400 13px Barlow,sans-serif}.ds-hover code{font:400 11px 'JetBrains Mono',monospace;color:var(--ink-3,#93b3d6)}.ds-hover .ds-chg{color:var(--rev,#ff8a75)}.ds-hover small{margin-top:3px;font:600 10.5px 'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3,#93b3d6)}"
     }
   ],
   "narrative": {
-    "northStar": "Morph with local Lens focus",
-    "overview": "The approved identity is **Morph with local Lens focus**, drawing on Flux's luminous cloud and commit timeline. A dark, dense instrument frame supports immersive spatial exploration. One persistent graph moves between organic Cloud and ordered Layers; the local focus opens one group while preserving its surroundings.\n\nThe graph supplies atmosphere and depth. Interface text, paths, measurements, and controls stay sharp. Repository state, selection, and evidence take priority over decorative effects.",
+    "northStar": "The Cyanotype Plan Sheet",
+    "overview": "**Creative North Star: \"The Cyanotype Plan Sheet\"**\n\nA repository is a set of plans and every commit is a revision. The explorer is one drawing with a title block, not an instrument panel: white linework on Prussian blue (Cyanotype, the default dark print) or navy ink on cool paper (Whiteprint, the light diazo print). Files are drafting marks, a stroked circle with a centre dot on a paper-filled disc. Change is drawn the way a drafter calls out a revision: a scalloped revision cloud, a Δ tag, a revision triangle on the time spine, and a title block naming the revision on the sheet.\n\nThe sheet is dense and quiet. Hairline 1px rules divide it; nothing floats on shadow. Colour is ink, not light: there is no glow, bloom or halo. Two hues carry meaning beyond ink. Chrome yellow marks only what can be pressed or what is currently chosen. Correction red marks change and risk; mint marks additions. Everything else is the print's own ink at three strengths.\n\nThe product's Evidence Rule binds the drawing: demo data is labelled wherever it appears, missing or partial history is stated in words, and a visual transition never implies that repository data changed. One persistent graph morphs between Cloud and Layers with stable node identity, and lenses re-ink that same graph rather than replacing it.",
     "keyCharacteristics": [
-      "Luminous point cores and additive halos within a nearly black blue workspace.",
-      "Compact, precise controls and restrained panel surfaces.",
-      "Stable node identities across layout changes, with local context retained.",
-      "Explicit status, coverage, unavailable-data, and demo labels."
+      "Prussian-blue or cool-paper ground; one drafting grid, behind the graph only.",
+      "Hairline rules and 3px corners; zero shadows.",
+      "Chrome yellow reserved for actionable and chosen elements.",
+      "Correction red for change and risk; mint for additions.",
+      "Barlow for the UI, Barlow Condensed tracked uppercase for title-block labels, JetBrains Mono for paths, hashes and figures.",
+      "Revision clouds, dashed removed files, Δ rev tags and a title block as the signature."
     ],
     "rules": [
       {
-        "name": "The Evidence Rule",
-        "body": "Demo, missing, limited, loading, and error states remain explicit. A visual transition must never imply that repository data changed.",
+        "name": "The Chrome Yellow Rule",
+        "body": "Chrome yellow appears only on something that can be pressed or something that is currently chosen. Status is never yellow: the demo tag is drawn in ink with a dashed border.",
         "section": "colors"
+      },
+      {
+        "name": "The Correction Rule",
+        "body": "Red means change or risk and nothing else. It always travels with a word, a Δ, a count or a shape (cloud, triangle, dashed outline), never as colour alone.",
+        "section": "colors"
+      },
+      {
+        "name": "The Evidence Rule",
+        "body": "Demo, missing, partial, loading and error states are stated in words on the sheet. A lens that derives from history says how many commit pairs it is based on and downloads nothing on its own.",
+        "section": "colors"
+      },
+      {
+        "name": "The Title Block Rule",
+        "body": "Tracked condensed capitals name a cell, a panel or a group, and sit with the data they label. They are never a decorative line above a headline.",
+        "section": "typography"
+      },
+      {
+        "name": "The Copied Text Rule",
+        "body": "Anything that could be pasted back into a terminal (path, hash, branch, function name) is set in JetBrains Mono. Paths truncate from the left so the filename stays visible.",
+        "section": "typography"
+      },
+      {
+        "name": "The Hairline Rule",
+        "body": "Rules, not shadows, separate the sheet. If a surface needs separating, give it a 1px rule; never a shadow, glow or blur halo.",
+        "section": "elevation"
+      },
+      {
+        "name": "The One Grid Rule",
+        "body": "The drafting grid exists only behind the graph and in the exported sheet. No other surface carries a grid or texture.",
+        "section": "elevation"
       }
     ],
     "dos": [
-      "**Do** preserve the approved Morph identity and a single continuous graph.",
-      "**Do** retain selection and context when changing spatial order.",
-      "**Do** pair semantic colors with labels or symbols and keep legends tied to the active mode.",
-      "**Do** keep demo, missing data, partial coverage, and errors explicit.",
-      "**Do** preserve keyboard access, Reduced Motion, low-power rendering, and the Files/Inspector fallback."
+      "**Do** keep chrome yellow to pressable or chosen elements: primary buttons, the active lens, active segmented choices, the current commit, the compare band, selection.",
+      "**Do** use correction red only for change and risk, always paired with a word, Δ, count, triangle, cloud or dashed outline.",
+      "**Do** separate every surface with 1px rules (`rule` inside, `rule-strong` around) and 3px corners.",
+      "**Do** label demo data with the dashed ink demo tag wherever it is on screen, and state history coverage in words.",
+      "**Do** set paths, hashes, branches and figures in JetBrains Mono, and labels in Barlow Condensed tracked capitals beside the data they name.",
+      "**Do** keep one persistent graph across Cloud, Layers and every lens, with selection and identity preserved.",
+      "**Do** space commits on the time spine by real elapsed time.",
+      "**Do** keep reduced motion, low power and the Files/Inspector fallback working for every new graph feature."
     ],
     "donts": [
-      "**Don't** add ambient camera rotation or apply graph bloom to text.",
-      "**Don't** invent architectural layer classifications or hide unmatched files.",
-      "**Don't** substitute demo data for failed real analysis without an explicit user action.",
-      "**Don't** treat atmospheric specks as repository entities or display them as data counts."
+      "**Don't** add box shadows, glows, bloom or halos; `--shadow` stays `none`.",
+      "**Don't** draw the drafting grid anywhere but behind the graph and in the exported sheet.",
+      "**Don't** use chrome yellow for status, tags, decoration or non-interactive containers.",
+      "**Don't** put a revision cloud on every changed file in a wide comparison; clouds go to the most-revised fifth.",
+      "**Don't** invent architectural layers or hide files that match no layer rule.",
+      "**Don't** let a visual transition suggest that repository data changed, or substitute demo data for failed real analysis.",
+      "**Don't** set tracked condensed capitals as a decorative line above a heading."
     ]
   }
 }

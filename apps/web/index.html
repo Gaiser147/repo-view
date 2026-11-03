@@ -3,12 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#060b14" />
+    <meta name="theme-color" content="#0f3157" />
+    <script>
+      try {
+        var t = localStorage.getItem("repo-view:theme");
+        document.documentElement.dataset.theme =
+          t || (matchMedia("(prefers-color-scheme: light)").matches ? "whiteprint" : "cyanotype");
+      } catch (e) {
+        document.documentElement.dataset.theme = "cyanotype";
+      }
+    </script>
     <meta
       name="description"
       content="Explore the shape, architecture and evolution of your codebase."
     />
-    <title>repo-view · See the shape of your code</title>
+    <title>repo-view · Blueprints of public repositories</title>
   </head>
   <body>
     <div id="root"></div>

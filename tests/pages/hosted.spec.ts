@@ -83,7 +83,7 @@ test("Pages subpath loads assets and analyzes a public repo without an API serve
   await page
     .getByRole("searchbox", { name: "Search repository" })
     .fill("hello");
-  await page.getByRole("button", { name: /hello/ }).first().click();
+  await page.getByRole("option", { name: /hello/ }).first().click();
   await expect(
     page.getByRole("complementary", { name: "Inspector" }),
   ).toContainText("hello");
@@ -157,7 +157,7 @@ test("slow background cache prepares adjacent commits and reuses unchanged sourc
     timeout: 30000,
   });
   await expect(page.locator(".cache-indicator")).toContainText(
-    /2 cached|3 cached/,
+    /[23] commits ready offline/,
     { timeout: 20000 },
   );
   const before = trees;

@@ -2,7 +2,7 @@
 
 Explore the shape, architecture and evolution of a GitHub repository.
 
-An interactive 3D code cloud morphs into layers without losing node identity. Unfold one package locally, follow resolved dependencies and function calls, scrub through commit snapshots, inspect GitHub Actions workflows, and open the evidence behind a structural health rating.
+An interactive 3D drawing of a repository morphs between a cloud and layers without losing node identity. Six lenses re-ink the same plan to answer one question each: architecture, hotspots, dependencies, evolution, pipelines and authors. Compare any two commits on the time spine, share the exact view as a link, export it as PNG, and open the evidence behind a structural health rating.
 
 ## Use on GitHub Pages
 
@@ -31,7 +31,7 @@ npm ci
 npm run dev
 ```
 
-Open **http://localhost:5173**. The app starts with a clearly labeled, deterministic demo with 50 commits. Use the repository dropdown to analyze a public `https://github.com/owner/repository` URL. An optional branch/ref can be entered in the same form.
+Open **http://localhost:5173**. The start screen analyzes a public `https://github.com/owner/repository` URL (optionally a branch or ref) or opens a clearly labeled, deterministic demo with 50 commits.
 
 For a production build:
 
@@ -46,16 +46,20 @@ No repository scripts, dependencies, hooks or workflow steps are executed during
 
 ## Explore
 
-- **Cloud / Layers** morphs the same graph over 1.5 seconds. Drag to orbit, scroll or use +/− to zoom, and use Fit to frame the codebase. On tablets, pinch to zoom and use two fingers to pan.
+The first visit opens a start screen: paste a public `github.com/owner/repository` URL (optionally a branch or commit), pick an example, reopen a recent repository, or open the labeled demo. The repository name in the top bar reopens it. Three short tips explain lenses, camera and history once; Settings and the help button show them again.
+
+- **Lenses** answer one question each and re-ink the same graph: **Architecture** (group, language or complexity colours), **Hotspots** (files that change often and are complex), **Dependencies** (resolved imports, most-imported files, links to the full import and function-call lists), **Evolution** (what changed between two revisions), **Pipelines** (GitHub Actions jobs and steps) and **Authors** (who last changed each file). A lens card names the scope and explains the legend in a sentence. Keys 1–6 switch lenses.
+- **Hotspots and Authors** are derived only from commits that are already open or cached, so they never spend extra GitHub requests. The card states how many commit pairs were compared. Without compared history, Hotspots ranks by complexity alone and says so. Scores are a review-effort heuristic, not a defect count.
+- **Cloud / Layers** morphs the same graph over about 1.5 seconds. Drag to orbit, scroll or use +/− to zoom, and Fit (0) frames the drawing. On touch screens, pinch to zoom and use two fingers to pan. Hovering a point previews its name, size, links and next action.
+- **⌘K / Ctrl+K or /** opens one search for files, functions, commits, lenses and actions (layout, fit, export, share, theme, performance mode, tips). Arrow keys and Enter choose.
+- **Time spine:** commits are placed by elapsed time; a line shows lines of code for every known snapshot and triangles mark large changes. Click a commit to open it, drag across commits (or Shift+click / Shift+Enter) to compare two revisions. Removed files fade out, additions turn mint and changed files get a revision cloud. The title block names sheet (commit message), revision, author, date and position. Comparisons load both snapshots before anything changes.
+- **Share** copies a link that restores repository, revision, lens, layout, focus, selection and comparison base. **Export** downloads the current drawing as PNG with a title block.
+- **Cyanotype / Whiteprint:** a dark Prussian-blue print and a light whiteprint for projectors and documentation. The choice follows the system setting until changed and is remembered per browser.
 - Click the current branch name to search loaded branches, load further branch pages, or enter a branch name directly. Switching branches replaces the timeline with that branch’s history.
-- **Groups** focuses or hides individual groups in either spatial layout. **Only** isolates one group; **Show all groups** restores the full codebase. Selecting a hidden file through Files/search reveals it.
-- Click a point, search result or tree entry to open the Inspector. Zoom closer to reveal functions and detail labels; the detail indicator shows the current level. Files and search provide equivalent navigation.
-- The toolbar independently hides Files, Inspector, History and CI. Expand cloud hides these panels and enters fullscreen where supported; exiting restores the previous layout. On tablets, Files and Inspector use a single drawer. Keyboard: F expands, +/− zoom, 0 fits and Escape dismisses the active surface.
-- Dependencies, Functions and Pipelines open dedicated workspaces with Back to cloud and Close controls. Search dependencies/functions, follow resolved calls, locate items in the cloud, or zoom and scroll workflow diagrams.
-- Use a group's focus icon to unfold it locally. Escape closes focus. Switching to global Layers retains selection and closes local focus.
-- Commit controls load actual snapshots atomically. Uncached history steps use one tree API call for a pinned SHA and reuse unchanged source blobs. Live CI results are omitted for historical snapshots to conserve requests; workflow structure remains available. Added and changed elements are highlighted using the Changes color mode; removed elements appear in the diff summary. Playback waits for each snapshot.
-- Pipelines shows workflow job dependencies and step details. Run states are matched to workflow path and exact job name. Matrix/expressions that cannot be matched remain unassessed.
-- Settings includes color modes, node size, animation/performance options and ordered layer rules such as `apps/**=0`. First matching rule wins. Unmatched files remain in Unassigned.
+- **Groups** focuses or hides individual groups in either spatial layout. **Only** isolates one group; **Show all groups** restores the full codebase. Selecting a hidden file through Files or search reveals it. Escape closes focus.
+- **Files** opens the file tree as a drawer; the **Inspector** floats on the right when something is selected and closes with Escape. Fullscreen (F) keeps only the lens bar and graph.
+- Commit controls load actual snapshots atomically. Uncached history steps use one tree API call for a pinned SHA and reuse unchanged source blobs. Live CI results are omitted for historical snapshots to conserve requests; workflow structure remains available. Playback waits for each snapshot.
+- Settings holds the print theme, node size, performance mode, reduced motion, background preparation of nearby commits and ordered layer rules such as `apps/**=0`. First matching rule wins. Unmatched files remain in Unassigned.
 - File tree and Inspector remain available without WebGL. Reduced-motion preferences disable decorative animation and use immediate layout changes.
 
 ## Analysis and limits

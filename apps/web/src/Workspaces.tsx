@@ -4,13 +4,11 @@ import {
   ArrowUpRight,
   Box,
   Braces,
-  Check,
   ChevronRight,
   ExternalLink,
   FileCode2,
   GitBranch,
   Maximize2,
-  Minus,
   Search,
   Workflow,
   X,
@@ -18,7 +16,6 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { pipelineDepths } from "../../../packages/core/src/pipeline";
-import type { CodeNode } from "../../../packages/core/src/index";
 import { useRepo } from "./state";
 const descriptions = {
   Dependencies: "Understand which files and packages depend on each other.",
@@ -26,7 +23,7 @@ const descriptions = {
   Pipelines: "Explore workflow dependencies, run results and individual steps.",
 };
 export function AnalysisWorkspace() {
-  const { view, set } = useRepo();
+  const { view } = useRepo();
   if (view === "Explore") return null;
   return (
     <section className="analysis-workspace" aria-label={`${view} workspace`}>
@@ -452,9 +449,7 @@ function Pipelines() {
                         ? `M${a.x + 95},${a.y + 70} C${a.x + 95},${a.y + 100} ${b.x + 95},${b.y - 30} ${b.x + 95},${b.y}`
                         : `M${a.x + 190},${a.y + 35} C${a.x + 215},${a.y + 35} ${b.x - 25},${b.y + 35} ${b.x},${b.y + 35}`
                     }
-                    fill="none"
-                    stroke="#476c88"
-                    strokeWidth={1.5}
+                    className="pipe-edge"
                   />
                 );
               })}
@@ -479,26 +474,13 @@ function Pipelines() {
                     <rect
                       width={190}
                       height={70}
-                      rx={8}
-                      fill={job?.id === j.id ? "#153b4b" : "#0f2030"}
-                      stroke={
-                        j.status === "failure"
-                          ? "#ef8392"
-                          : job?.id === j.id
-                            ? "#72dbc8"
-                            : "#36536c"
-                      }
-                      strokeWidth={1.4}
+                      rx={3}
+                      className={`pipe-job ${j.status} ${job?.id === j.id ? "selected" : ""}`}
                     />
-                    <text x={17} y={28} fill="#e1ecf7" fontSize={15}>
+                    <text x={17} y={28} className="pipe-name">
                       {j.name.slice(0, 20)}
                     </text>
-                    <text
-                      x={17}
-                      y={51}
-                      fill={j.status === "success" ? "#89dfc5" : "#a7bdd0"}
-                      fontSize={12}
-                    >
+                    <text x={17} y={51} className={`pipe-status ${j.status}`}>
                       {j.status === "unavailable"
                         ? "No run available"
                         : j.status}

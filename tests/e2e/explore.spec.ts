@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 test("explore morph, focus, search, history and health", async ({ page }) => {
   await page.goto("/");
   await expect(
@@ -9,7 +9,11 @@ test("explore morph, focus, search, history and health", async ({ page }) => {
     page.getByRole("button", { name: "Layers", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Cloud", exact: true }).click();
-  await page.getByRole("button", { name: "Focus apps", exact: true }).click();
+  await page.getByRole("button", { name: "Group visibility" }).click();
+  await page
+    .getByRole("button", { name: "Focus group apps", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Close group visibility" }).click();
   await expect(page.getByRole("button", { name: "Exit focus" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(
@@ -19,7 +23,7 @@ test("explore morph, focus, search, history and health", async ({ page }) => {
     .getByRole("searchbox", { name: "Search repository" })
     .fill("session");
   await page
-    .getByRole("button", { name: /session/ })
+    .getByRole("option", { name: /session/ })
     .first()
     .click();
   await expect(
@@ -78,4 +82,56 @@ test("reduced-motion mode changes the rendered graph, not just the layout toggle
   await page.waitForTimeout(300);
   const after = await page.screenshot({ clip });
   expect(before.equals(after)).toBe(false);
+});
+
+test("first visit offers a start screen and tips, then lenses re-ink the same plan", async ({
+  browser,
+}) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto("/");
+  await expect(
+    page.getByRole("region", { name: "Open a repository" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /acme\/atlas-commerce/ }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Start with a question" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Skip tips" }).click();
+  await page.getByRole("button", { name: "Hotspots", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Hotspots lens" }),
+  ).toContainText("changes");
+  await page.keyboard.press("4");
+  await expect(
+    page.getByRole("button", { name: "Evolution", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await context.close();
+});
+test("comparing two revisions marks the difference and survives a shared link", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.waitForSelector("canvas");
+  const track = await page.locator(".spine-track").boundingBox();
+  if (!track) throw new Error("Time spine missing");
+  const y = track.y + track.height - 6;
+  await page.mouse.move(track.x + track.width * 0.4, y);
+  await page.mouse.down();
+  await page.mouse.move(track.x + track.width * 0.7, y, { steps: 6 });
+  await page.mouse.up();
+  await expect(
+    page.getByRole("region", { name: "Evolution lens" }),
+  ).toContainText("chosen base");
+  await expect(page.getByTestId("commit-sha")).toBeVisible();
+  await expect.poll(() => page.url()).toContain("from=");
+  const url = page.url();
+  await page.goto(url);
+  await expect(
+    page.getByRole("region", { name: "Evolution lens" }),
+  ).toContainText("chosen base");
+  await page.getByRole("button", { name: "Clear comparison" }).first().click();
+  await expect(
+    page.getByRole("region", { name: "Evolution lens" }),
+  ).not.toContainText("chosen base");
 });
