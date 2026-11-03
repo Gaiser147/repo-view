@@ -16,11 +16,24 @@ import {
   type WarmState,
 } from "./history-cache";
 import { cachedSnapshot, cacheSnapshot } from "./browser/cache";
-import { fileHistory, type History } from "../../../packages/core/src/insights";
+import {
+  fileHistory,
+  sampledHistory,
+  type History,
+} from "../../../packages/core/src/insights";
+import type { CompareResult } from "../../../packages/core/src/github-public";
+import { diffFromCompare } from "../../../packages/core/src/compare";
 import type { Theme } from "./colors";
-export type View = "Explore" | "Dependencies" | "Functions" | "Pipelines";
+export type View =
+  | "Explore"
+  | "Dependencies"
+  | "Functions"
+  | "Pipelines"
+  | "Flow"
+  | "Architecture";
 export type Lens =
   | "architecture"
+  | "flow"
   | "hotspots"
   | "dependencies"
   | "impact"
@@ -34,13 +47,15 @@ export type ColorMode =
   | "changes"
   | "hotspots"
   | "authors"
-  | "impact";
+  | "impact"
+  | "flow";
 export const lenses: { id: Lens; name: string; question: string }[] = [
   {
     id: "architecture",
     name: "Architecture",
     question: "How is it organized?",
   },
+  { id: "flow", name: "Flow", question: "How does it run?" },
   { id: "hotspots", name: "Hotspots", question: "Where is the risk?" },
   {
     id: "dependencies",
@@ -58,6 +73,7 @@ const lensColor: Partial<Record<Lens, ColorMode>> = {
   authors: "authors",
   dependencies: "module",
   impact: "impact",
+  flow: "flow",
 };
 /** One step of exploration that Back and Forward can return to. */
 export interface NavEntry {
@@ -90,9 +106,14 @@ interface State extends PanelState {
   diffBase: string | null;
   history: History | null;
   historyRepository: string;
+  sampled: { repository: string; branch: string; history: History } | null;
+  sampling: { done: number; total: number } | null;
+  compareNote: string | null;
   started: boolean;
   toast: string | null;
   impactDepth: number;
+  flowDepth: number;
+  labelMode: "auto" | "groups" | "off";
   dimUnchanged: boolean;
   navBack: NavEntry[];
   navForward: NavEntry[];
@@ -195,12 +216,17 @@ export const useRepo = create<State>((set, get) => ({
   diffBase: null,
   history: null,
   historyRepository: "",
+  sampled: null,
+  sampling: null,
+  compareNote: null,
   started:
     stored("repo-view:started") === "1" ||
     (typeof location !== "undefined" &&
       new URLSearchParams(location.search).has("repo")),
   toast: null,
   impactDepth: 3,
+  flowDepth: 4,
+  labelMode: "auto",
   dimUnchanged: false,
   navBack: [],
   navForward: [],
@@ -385,6 +411,7 @@ export const useRepo = create<State>((set, get) => ({
       diff,
       diffBase: same ? prev.sha : null,
       compareBase: null,
+      compareNote: null,
       selectedId:
         same && s.nodes.some((n) => n.id === selected) ? selected : null,
       focus:
@@ -722,11 +749,86 @@ export async function refreshHistory() {
     if (ticket !== historyTicket) return;
   }
   if (ticket !== historyTicket) return;
-  useRepo.getState().set({
-    history: fileHistory(s.commits, (sha) => found.get(sha)),
-    historyRepository: repository,
-  });
+  const exact = fileHistory(s.commits, (sha) => found.get(sha)),
+    sampled = useRepo.getState().sampled;
+  // Sampled periods cover the whole timeline; exact snapshot pairs still win where they exist.
+  const history =
+    sampled &&
+    sampled.repository === repository &&
+    sampled.branch === s.branch &&
+    exact.coverage.compared < exact.coverage.total
+      ? {
+          ...sampled.history,
+          loc: exact.loc,
+          changedPerCommit: new Map([
+            ...sampled.history.changedPerCommit,
+            ...exact.changedPerCommit,
+          ]),
+        }
+      : exact;
+  useRepo.getState().set({ history, historyRepository: repository });
 }
+/** Periods sampled across the loaded timeline: one comparison each. */
+export function samplePlan(commits: Commit[], periods = 12) {
+  const chronological = [...commits].reverse(),
+    n = chronological.length,
+    k = Math.min(periods, n - 1),
+    marks = [
+      ...new Set(
+        Array.from({ length: k + 1 }, (_, i) => Math.round((i * (n - 1)) / k)),
+      ),
+    ];
+  return k < 1
+    ? []
+    : marks.slice(1).map((m, i) => ({
+        base: chronological[marks[i]].sha,
+        head: chronological[m].sha,
+      }));
+}
+/**
+ * Builds Hotspots and Authors for the whole loaded history from about a dozen
+ * GitHub comparisons instead of one snapshot per commit.
+ */
+export async function sampleHistory() {
+  const s = useRepo.getState(),
+    repository = s.snapshot.repository,
+    branch = s.branch,
+    plan = samplePlan(s.commits);
+  if (s.snapshot.demo || !plan.length || s.sampling) return;
+  s.set({ sampling: { done: 0, total: plan.length } });
+  const periods: Parameters<typeof sampledHistory>[0] = [];
+  try {
+    for (const p of plan) {
+      const result = await json<CompareResult>(
+        `/api/repos/${repository}/compare?base=${p.base}&head=${p.head}`,
+      );
+      if (useRepo.getState().snapshot.repository !== repository) return;
+      periods.push({
+        head: p.head,
+        files: result.files,
+        authors: result.commits.map((c) => c.author),
+      });
+      useRepo
+        .getState()
+        .set({ sampling: { done: periods.length, total: plan.length } });
+    }
+    useRepo.getState().set({
+      sampled: {
+        repository,
+        branch,
+        history: sampledHistory(periods, s.commits.length),
+      },
+      sampling: null,
+    });
+    void refreshHistory();
+  } catch (e) {
+    useRepo.getState().set({
+      sampling: null,
+      error: `${e instanceof Error ? e.message : "Sampling failed."} ${periods.length} of ${plan.length} periods were read.`,
+    });
+  }
+}
+
 /** Displays `to` and marks every difference from `from`. Both snapshots load atomically before anything changes. */
 export async function compareCommits(from: string, to: string) {
   const s = useRepo.getState(),
@@ -734,7 +836,52 @@ export async function compareCommits(from: string, to: string) {
     order = (sha: string) => s.commits.findIndex((c) => c.sha === sha);
   if (from === to) return;
   if (order(from) < order(to)) [from, to] = [to, from];
-  s.set({ playing: false, pending: true, progress: "Loading base revision…" });
+  s.set({
+    playing: false,
+    pending: true,
+    progress: "Loading base revision…",
+    compareNote: null,
+  });
+  // Without a local copy of the base, one GitHub comparison replaces a second full snapshot.
+  const local = s.snapshot.demo
+    ? true
+    : !!(
+        memory.get(repository, from) ??
+        (await cachedSnapshot(repository, from).catch(() => undefined))
+      );
+  if (!local)
+    try {
+      if (useRepo.getState().snapshot.sha !== to) {
+        useRepo.getState().set({ progress: "Loading compared revision…" });
+        await loadCommit(to);
+      }
+      const now = useRepo.getState();
+      if (now.snapshot.sha !== to || now.snapshot.repository !== repository)
+        return;
+      now.set({ pending: true, progress: "Comparing on GitHub (1 request)…" });
+      const result = await json<CompareResult>(
+        `/api/repos/${repository}/compare?base=${from}&head=${to}`,
+      );
+      const after = useRepo.getState();
+      if (after.snapshot.sha !== to) return;
+      after.set({
+        previousSnapshot: null,
+        diff: diffFromCompare(result, after.snapshot),
+        diffBase: from,
+        compareBase: from,
+        pending: false,
+        lens: "evolution",
+        color: "changes",
+        compareNote: result.truncated
+          ? "GitHub lists at most 300 changed files per comparison, so this list is partial. Removed files are listed but not drawn."
+          : "Compared on GitHub with one request. Removed files are listed but not drawn.",
+      });
+      if (after.view !== "Explore") after.toggleView("Explore");
+      void refreshHistory();
+      return;
+    } catch {
+      useRepo.getState().set({ progress: "Loading base revision…" });
+    }
   try {
     const base = await getSnapshot(repository, from);
     if (useRepo.getState().snapshot.repository !== repository) return;
@@ -764,6 +911,7 @@ export async function compareCommits(from: string, to: string) {
 }
 export function clearCompare() {
   useRepo.getState().set({
+    compareNote: null,
     compareBase: null,
     diff: null,
     diffBase: null,

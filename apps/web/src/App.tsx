@@ -21,6 +21,7 @@ import {
   Settings2,
   ShieldCheck,
   Sun,
+  Tag,
   X,
   ZoomIn,
   ZoomOut,
@@ -191,7 +192,12 @@ export function App() {
       else if (e.key.toLowerCase() === "f") void fullscreen();
       else if (/^[1-9]$/.test(e.key) && Number(e.key) <= lenses.length)
         useRepo.getState().setLens(lenses[Number(e.key) - 1].id);
-      else if (e.key === "[") useRepo.getState().navigate(-1);
+      else if (e.key.toLowerCase() === "l") {
+        const m = useRepo.getState().labelMode;
+        set({
+          labelMode: m === "auto" ? "groups" : m === "groups" ? "off" : "auto",
+        });
+      } else if (e.key === "[") useRepo.getState().navigate(-1);
       else if (e.key === "]") useRepo.getState().navigate(1);
     };
     window.addEventListener("keydown", handler);
@@ -239,6 +245,12 @@ export function App() {
       run: () => set({ layout: "plan" }),
     },
     { id: "back", label: "Back", hint: "[", run: () => state.navigate(-1) },
+    { id: "flow", label: "Flow diagram", run: () => state.toggleView("Flow") },
+    {
+      id: "architecture",
+      label: "Architecture diagram",
+      run: () => state.toggleView("Architecture"),
+    },
     {
       id: "forward",
       label: "Forward",
@@ -620,6 +632,23 @@ export function App() {
               ) : (
                 <Maximize2 size={17} strokeWidth={1.6} />
               )}
+            </button>
+            <button
+              className={`icon-button ${state.labelMode !== "auto" ? "active" : ""}`}
+              aria-label={`Labels: ${state.labelMode === "auto" ? "files and groups" : state.labelMode === "groups" ? "groups only" : "off"}`}
+              title="Cycle labels: all · groups only · off (L)"
+              onClick={() =>
+                set({
+                  labelMode:
+                    state.labelMode === "auto"
+                      ? "groups"
+                      : state.labelMode === "groups"
+                        ? "off"
+                        : "auto",
+                })
+              }
+            >
+              <Tag size={16} strokeWidth={1.6} />
             </button>
             <button
               className="icon-button"

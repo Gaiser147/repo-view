@@ -97,6 +97,8 @@ export interface RepoSnapshot {
     dev: boolean;
     manifest?: string;
   }[];
+  /** npm scripts from each package.json; absent in snapshots analyzed before scripts were read. */
+  scripts?: { manifest: string; name: string; command: string }[];
 }
 export interface Commit {
   sha: string;

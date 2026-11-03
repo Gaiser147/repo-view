@@ -147,7 +147,8 @@ export function analyzeFiles(
   const asts = new Map<string, ts.SourceFile>(),
     importMaps = new Map<string, Map<string, { path: string; name: string }>>(),
     functions = new Map<string, Map<string, string>>(),
-    dependencies: RepoSnapshot["dependencies"] = [];
+    dependencies: RepoSnapshot["dependencies"] = [],
+    scripts: NonNullable<RepoSnapshot["scripts"]> = [];
   const addEdge = (source: string, target: string, kind: CodeEdge["kind"]) => {
     const id = `${kind}:${source}>${target}`;
     if (!edges.some((e) => e.id === id))
@@ -236,6 +237,9 @@ export function analyzeFiles(
               dev,
               manifest: f.path,
             });
+        for (const [name, command] of Object.entries(p.scripts ?? {}))
+          if (typeof command === "string")
+            scripts.push({ manifest: f.path, name, command });
       } catch {
         /* malformed manifest remains visible */
       }
@@ -441,6 +445,7 @@ export function analyzeFiles(
     },
     pipeline: parseWorkflows(files),
     dependencies,
+    scripts,
     demo: false,
   };
 }

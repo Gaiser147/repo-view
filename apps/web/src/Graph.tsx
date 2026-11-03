@@ -27,8 +27,14 @@ import { useHover, graphCanvas } from "./hover";
 import { inks, mixHex, authorColor, groupColor } from "./colors";
 import { fileComplexity } from "../../../packages/core/src/insights";
 import { impactOf } from "../../../packages/core/src/impact";
+import { flowFrom } from "../../../packages/core/src/flow";
 import { planLayout } from "../../../packages/core/src/plan";
 // Drafting marks: a stroked circle with a centre dot on a paper-filled disc. mark=1 draws a scalloped revision cloud.
+/** Vertex colours on built-in materials are linear; convert sRGB values so fills and frames match the CSS inks. */
+function linear([r, g, b]: [number, number, number]): [number, number, number] {
+  const c = new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace);
+  return [c.r, c.g, c.b];
+}
 const vertex = `attribute float size; attribute float alpha; attribute float mark; attribute vec3 tint; varying vec3 vTint; varying float vAlpha; varying float vMark; varying float vPx; void main(){ vTint=tint; vAlpha=alpha; vMark=mark; vec4 mv=modelViewMatrix*vec4(position,1.); float px=clamp(size*260./-mv.z,3.,56.)*(mark>.5?1.7:1.); vPx=px; gl_PointSize=px; gl_Position=projectionMatrix*mv; }`;
 // mark: 0 plain, 1 revision cloud (eight inward-cusped arcs around a smaller mark), 2 removed file (dashed outline, no paper).
 const fragment = `uniform vec3 uGround; varying vec3 vTint; varying float vAlpha; varying float vMark; varying float vPx; void main(){ vec2 q=gl_PointCoord-vec2(.5); float d=length(q)*2.; if(d>1.)discard; float aa=2.2/max(vPx,3.); float a=atan(q.y,q.x); float r=vMark>.5&&vMark<1.5?.5:1.; float ring=smoothstep(r*.74-aa,r*.74,d)*(1.-smoothstep(r*.88,r*.88+aa,d)); float dotc=1.-smoothstep(r*.26,r*.26+aa,d); float paper=1.-smoothstep(r*.7,r*.7+aa,d); float cloud=0.; if(vMark>.5&&vMark<1.5){ float s=.8+.14*abs(sin(a*4.)); cloud=smoothstep(s-.08-aa,s-.08,d)*(1.-smoothstep(s,s+aa,d)); } if(vMark>1.5){ ring*=step(.5,fract(a*1.9099)); dotc=0.; paper=0.; } float ink=max(max(ring,dotc),cloud); float alpha=max(ink,paper*.92)*vAlpha; if(alpha<.01)discard; gl_FragColor=vec4(mix(uGround,vTint,ink),alpha); }`;
@@ -93,6 +99,7 @@ function Cloud({ layout }: { layout: Layout }) {
     clock = useRef(0),
     frames = useRef({ time: 0, count: 0 }),
     dirty = useRef(true);
+  const lastTap = useRef<{ t: number; x: number; y: number } | null>(null);
   const hidden = useMemo(
     () =>
       new Set([
@@ -249,6 +256,27 @@ function Cloud({ layout }: { layout: Layout }) {
       )
         return;
       useHover.getState().set(null);
+      // Touch screens never send dblclick reliably: two quick taps in one place fly closer, like a double-click.
+      if (event.pointerType === "touch") {
+        const now = performance.now(),
+          last = lastTap.current;
+        lastTap.current = { t: now, x: event.clientX, y: event.clientY };
+        if (
+          last &&
+          now - last.t < 320 &&
+          Math.hypot(last.x - event.clientX, last.y - event.clientY) < 30
+        ) {
+          lastTap.current = null;
+          canvas.dispatchEvent(
+            new MouseEvent("dblclick", {
+              clientX: event.clientX,
+              clientY: event.clientY,
+              bubbles: true,
+            }),
+          );
+          return;
+        }
+      }
       useRepo
         .getState()
         .select(
@@ -297,7 +325,10 @@ function Cloud({ layout }: { layout: Layout }) {
   const [packageLabels, setPackageLabels] = useState<string[]>([]),
     lastPackageLabels = useRef("");
   const [labelIds, setLabelIds] = useState<string[]>([]),
-    lastLabels = useRef("");
+    lastLabels = useRef(""),
+    // Each detail label sits beside its point, in whichever corner is free, joined by a leader line.
+    labelOffsets = useRef(new Map<string, [number, number]>()),
+    labelMode = useRepo((s) => s.labelMode);
   const ink = inks[theme];
   const colors = useMemo(
     () => groups.map((g) => new THREE.Color(groupColor(g, groups, theme))),
@@ -326,13 +357,18 @@ function Cloud({ layout }: { layout: Layout }) {
     return [...counts].sort((a, b) => b[1] - a[1]).map(([a]) => a);
   }, [history]);
   const ground = useMemo(() => new THREE.Color(ink.ground), [ink]);
-  const { impactDepth, dimUnchanged } = useRepo(),
+  const { impactDepth, dimUnchanged, flowDepth } = useRepo(),
     impact = useMemo(
       () =>
         color === "impact" && selectedId
           ? impactOf(snapshot, selectedId, impactDepth)
-          : null,
-      [color, selectedId, snapshot, impactDepth],
+          : color === "flow" && selectedId
+            ? (() => {
+                const f = flowFrom(snapshot, selectedId, flowDepth);
+                return f ? { distance: f.distance } : null;
+              })()
+            : null,
+      [color, selectedId, snapshot, impactDepth, flowDepth],
     );
   // Room outlines of the floor plan, drawn as one set of hairlines that fades in with the plan.
   const plan = useMemo(() => planLayout(snapshot.nodes), [snapshot]),
@@ -345,10 +381,12 @@ function Cloud({ layout }: { layout: Layout }) {
           x1 = x0 + f.w,
           y0 = plan.height / 2 - f.y,
           y1 = y0 - f.h,
-          rgb = mixHex(
-            ink.ground,
-            f.kind === "group" ? ink.ink : ink.line,
-            f.kind === "group" ? 0.7 : f.kind === "folder" ? 0.42 : 0.2,
+          rgb = linear(
+            mixHex(
+              ink.ground,
+              f.kind === "group" ? ink.ink : ink.line,
+              f.kind === "group" ? 0.95 : f.kind === "folder" ? 0.6 : 0.32,
+            ),
           );
         for (const [ax, ay, bx, by] of [
           [x0, y0, x1, y0],
@@ -376,6 +414,59 @@ function Cloud({ layout }: { layout: Layout }) {
       [plan],
     ),
     [showPlanLabels, setShowPlanLabels] = useState(false);
+  // Solid rooms under the frames, so the plan reads as a drawing on any ground; file rooms take their mark's ink.
+  const fillMaterial = useRef<THREE.MeshBasicMaterial>(null),
+    { fillGeo, fillIndex } = useMemo(() => {
+      const g = new THREE.BufferGeometry(),
+        pos: number[] = [],
+        col: number[] = [],
+        index = new Map<string, number>();
+      const ordered = [...plan.frames].sort((a, b) => a.depth - b.depth);
+      for (const f of ordered) {
+        const x0 = f.x - plan.width / 2,
+          x1 = x0 + f.w,
+          y0 = plan.height / 2 - f.y,
+          y1 = y0 - f.h,
+          z = -0.2 + f.depth * 0.01,
+          rgb = linear(
+            mixHex(
+              ink.ground,
+              ink.ink,
+              f.kind === "group"
+                ? 0.07
+                : f.kind === "folder"
+                  ? 0.04 + f.depth * 0.025
+                  : 0.2,
+            ),
+          );
+        if (f.kind === "file") index.set(f.id, pos.length / 3);
+        pos.push(
+          x0,
+          y0,
+          z,
+          x1,
+          y0,
+          z,
+          x1,
+          y1,
+          z,
+          x0,
+          y0,
+          z,
+          x1,
+          y1,
+          z,
+          x0,
+          y1,
+          z,
+        );
+        for (let k = 0; k < 6; k++) col.push(...rgb);
+      }
+      g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+      return { fillGeo: g, fillIndex: index };
+    }, [plan, ink]);
+  useEffect(() => () => fillGeo.dispose(), [fillGeo]);
   useEffect(() => () => frameGeo.dispose(), [frameGeo]);
   const uniforms = useMemo(() => ({ uGround: { value: ground } }), [ground]);
   const changed = useRepo((s) => s.diff),
@@ -435,6 +526,7 @@ function Cloud({ layout }: { layout: Layout }) {
     reducedMotion,
     labelIds,
     packageLabels,
+    labelMode,
     theme,
     lens,
     hotScore,
@@ -462,6 +554,10 @@ function Cloud({ layout }: { layout: Layout }) {
     if (frameMaterial.current) {
       frameMaterial.current.opacity = planT.current;
       frameMaterial.current.visible = planT.current > 0.01;
+    }
+    if (fillMaterial.current) {
+      fillMaterial.current.opacity = planT.current;
+      fillMaterial.current.visible = planT.current > 0.01;
     }
     transition.current = reducedMotion
       ? target
@@ -557,25 +653,69 @@ function Cloud({ layout }: { layout: Layout }) {
           width: number;
           height: number;
         }[] = [];
-        for (const candidate of [...headingCandidates, ...detailCandidates]
+        const points: { x: number; y: number }[] = [];
+        const free = (r: {
+          x: number;
+          y: number;
+          width: number;
+          height: number;
+        }) =>
+          accepted.every(
+            (a) =>
+              Math.abs(a.x - r.x) > (a.width + r.width) / 2 + 6 ||
+              Math.abs(a.y - r.y) > (a.height + r.height) / 2 + 4,
+          ) &&
+          points.every(
+            (q) =>
+              Math.abs(q.x - r.x) > r.width / 2 + 7 ||
+              Math.abs(q.y - r.y) > r.height / 2 + 7,
+          );
+        const offsets = new Map<string, [number, number]>(),
+          cap =
+            size.width < 600 ? 4 : coarse ? 6 : planT.current > 0.5 ? 18 : 10;
+        for (const candidate of [
+          ...(labelMode === "off" ? [] : headingCandidates),
+          ...(labelMode === "auto" ? detailCandidates : []),
+        ]
           .filter((n) => n.visible)
           .sort((a, b) => a.score - b.score)) {
-          if (
-            accepted.length >=
-            (size.width < 600 ? 3 : coarse ? 5 : planT.current > 0.5 ? 16 : 7)
-          )
-            break;
-          if (
-            accepted.every(
-              (a) =>
-                Math.abs(a.x - candidate.x) >
-                  (a.width + candidate.width) / 2 + 12 ||
-                Math.abs(a.y - candidate.y) >
-                  (a.height + candidate.height) / 2 + 10,
-            )
-          )
-            accepted.push(candidate);
+          if (accepted.length >= cap) break;
+          if (candidate.id.startsWith("pkg:")) {
+            if (free(candidate)) accepted.push(candidate);
+            continue;
+          }
+          const dx = candidate.width / 2 + 14,
+            previous = labelOffsets.current.get(candidate.id),
+            corners: [number, number][] = [
+              [dx, -18],
+              [-dx, -18],
+              [dx, 18],
+              [-dx, 18],
+              [0, -30],
+              [0, 30],
+            ];
+          // Keep last frame's corner first so labels do not jump while the camera moves.
+          if (previous)
+            corners.sort(
+              (a, b) =>
+                Number(b[0] === previous[0] && b[1] === previous[1]) -
+                Number(a[0] === previous[0] && a[1] === previous[1]),
+            );
+          for (const [ox, oy] of corners) {
+            const rect = {
+              ...candidate,
+              x: candidate.x + ox,
+              y: candidate.y + oy,
+            };
+            if (free(rect)) {
+              accepted.push(rect);
+              points.push({ x: candidate.x, y: candidate.y });
+              offsets.set(candidate.id, [ox, oy]);
+              break;
+            }
+          }
         }
+        labelOffsets.current = offsets;
         const visibleLabels = accepted
           .filter((n) => !n.id.startsWith("pkg:"))
           .map((n) => n.id);
@@ -587,7 +727,9 @@ function Cloud({ layout }: { layout: Layout }) {
           lastPackageLabels.current = packageKey;
           setPackageLabels(packages);
         }
-        const key = visibleLabels.join("|");
+        const key = visibleLabels
+          .map((id) => `${id}@${offsets.get(id)?.join(",")}`)
+          .join("|");
         if (key !== lastLabels.current) {
           lastLabels.current = key;
           setLabelIds(visibleLabels);
@@ -691,7 +833,7 @@ function Cloud({ layout }: { layout: Layout }) {
           ),
         );
       let fade = 0;
-      if (color === "impact") {
+      if (color === "impact" || color === "flow") {
         const hop = impact?.distance.get(n.id);
         c = pick(
           hop === undefined
@@ -699,7 +841,9 @@ function Cloud({ layout }: { layout: Layout }) {
             : hop === 0
               ? ink.select
               : hop === 1
-                ? ink.revision
+                ? color === "flow"
+                  ? ink.ink
+                  : ink.revision
                 : hop === 2
                   ? ink.ink
                   : ink.line,
@@ -723,6 +867,18 @@ function Cloud({ layout }: { layout: Layout }) {
           ? c.clone().lerp(ground, dim)
           : c;
       tints.set([tint.r, tint.g, tint.b], i * 3);
+      const room = n.kind === "file" ? fillIndex.get(n.id) : undefined;
+      if (room !== undefined) {
+        const fill = linear(
+            mixHex(
+              ink.ground,
+              `#${tint.getHexString()}`,
+              active ? 0.45 : fade ? 0.06 : theme === "cyanotype" ? 0.16 : 0.26,
+            ),
+          ),
+          colorsArray = fillGeo.attributes.color.array as Float32Array;
+        for (let k = 0; k < 6; k++) colorsArray.set(fill, (room + k) * 3);
+      }
       // Faded marks also lose their paper fill, so they recede instead of punching holes in the linework.
       if (fade && !active) alphas[i] *= 1 - fade * 0.85;
       marks[i] = active ? 0 : ghostIds.has(n.id) ? 2 : marked;
@@ -751,6 +907,7 @@ function Cloud({ layout }: { layout: Layout }) {
     geo.attributes.size.needsUpdate = true;
     geo.attributes.alpha.needsUpdate = true;
     geo.attributes.mark.needsUpdate = true;
+    fillGeo.attributes.color.needsUpdate = true;
     const lp = lineGeo.attributes.position.array as Float32Array,
       lc = lineGeo.attributes.color.array as Float32Array;
     for (let i = 0; i < links.length; i++) {
@@ -761,11 +918,11 @@ function Cloud({ layout }: { layout: Layout }) {
       lp.set(pos.subarray(a * 3, a * 3 + 3), i * 6);
       lp.set(pos.subarray(b * 3, b * 3 + 3), i * 6 + 3);
       const reached =
-          color === "impact" &&
+          (color === "impact" || color === "flow") &&
           impact?.distance.has(e.source) &&
           impact.distance.has(e.target),
         quiet =
-          (color === "impact" && !reached) ||
+          ((color === "impact" || color === "flow") && !reached) ||
           (color === "changes" &&
             dimUnchanged &&
             !!changed &&
@@ -784,7 +941,13 @@ function Cloud({ layout }: { layout: Layout }) {
           (1 - 0.8 * planT.current * (active || reached ? 0 : 1)),
         rgb = mixHex(
           ink.ground,
-          active ? ink.select : reached ? ink.revision : ink.line,
+          active
+            ? ink.select
+            : reached
+              ? color === "flow"
+                ? ink.select
+                : ink.revision
+              : ink.line,
           power,
         );
       lc.set([...rgb, ...rgb], i * 6);
@@ -867,10 +1030,28 @@ function Cloud({ layout }: { layout: Layout }) {
       <lineSegments ref={lines} geometry={lineGeo} frustumCulled={false}>
         <lineBasicMaterial vertexColors depthWrite={false} />
       </lineSegments>
+      <mesh
+        geometry={fillGeo}
+        frustumCulled={false}
+        raycast={() => {}}
+        renderOrder={-2}
+      >
+        <meshBasicMaterial
+          ref={fillMaterial}
+          vertexColors
+          transparent
+          opacity={0}
+          visible={false}
+          depthWrite={false}
+          depthTest={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
       <lineSegments
         geometry={frameGeo}
         frustumCulled={false}
         raycast={() => {}}
+        renderOrder={-1}
       >
         <lineBasicMaterial
           ref={frameMaterial}
@@ -907,18 +1088,46 @@ function Cloud({ layout }: { layout: Layout }) {
             }}
           >
             <Html center zIndexRange={[3, 0]}>
-              <button
-                className={`node-label ${n.kind} ${selectedId === id ? "selected" : ""}`}
-                onClick={() => useRepo.getState().select(id)}
-                title={n.path}
-              >
-                {n.kind === "function" ? "ƒ " : ""}
-                {revisionTop.has(n.id) && <span className="delta">Δ</span>}
-                {n.name}
-                {revisionTop.has(n.id) && history?.files.get(n.path) && (
-                  <small>rev {history.files.get(n.path)!.changes}</small>
-                )}
-              </button>
+              <div className="callout">
+                {(() => {
+                  const [dx, dy] = labelOffsets.current.get(id) ?? [0, -24];
+                  return (
+                    <svg
+                      className="leader"
+                      style={{
+                        left: Math.min(0, dx),
+                        top: Math.min(0, dy),
+                        width: Math.abs(dx) || 1,
+                        height: Math.abs(dy) || 1,
+                      }}
+                      aria-hidden="true"
+                    >
+                      <line
+                        x1={dx < 0 ? -dx : 0}
+                        y1={dy < 0 ? -dy : 0}
+                        x2={dx < 0 ? 0 : dx}
+                        y2={dy < 0 ? 0 : dy}
+                      />
+                    </svg>
+                  );
+                })()}
+                <button
+                  className={`node-label ${n.kind} ${selectedId === id ? "selected" : ""}`}
+                  style={{
+                    left: (labelOffsets.current.get(id) ?? [0, -24])[0],
+                    top: (labelOffsets.current.get(id) ?? [0, -24])[1],
+                  }}
+                  onClick={() => useRepo.getState().select(id)}
+                  title={n.path}
+                >
+                  {n.kind === "function" ? "ƒ " : ""}
+                  {revisionTop.has(n.id) && <span className="delta">Δ</span>}
+                  {n.name}
+                  {revisionTop.has(n.id) && history?.files.get(n.path) && (
+                    <small>rev {history.files.get(n.path)!.changes}</small>
+                  )}
+                </button>
+              </div>
             </Html>
           </group>
         );
@@ -1088,6 +1297,23 @@ function Camera({ layout }: { layout: Layout }) {
         .multiplyScalar(-shift);
     move(target.clone().add(sideways), distance);
   }
+  /** The point under the pointer on the depth plane through the camera target. */
+  function pointUnder(clientX: number, clientY: number) {
+    if (!controls.current) return null;
+    const rect = gl.domElement.getBoundingClientRect(),
+      ndc = new THREE.Vector2(
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -((clientY - rect.top) / rect.height) * 2 + 1,
+      ),
+      ray = new THREE.Raycaster();
+    ray.setFromCamera(ndc, camera);
+    const normal = camera.getWorldDirection(new THREE.Vector3()),
+      plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+        normal,
+        controls.current.target,
+      );
+    return ray.ray.intersectPlane(plane, new THREE.Vector3());
+  }
   const previousMode = useRef(mode);
   useEffect(() => {
     const changedMode = previousMode.current !== mode;
@@ -1179,21 +1405,96 @@ function Camera({ layout }: { layout: Layout }) {
       const delta = event.deltaY * (event.deltaMode === 1 ? 16 : 1),
         distance =
           distanceGoal.current ??
-          camera.position.distanceTo(controls.current.target);
-      move(
-        controls.current.target.clone(),
-        THREE.MathUtils.clamp(
+          camera.position.distanceTo(controls.current.target),
+        next = THREE.MathUtils.clamp(
           distance * Math.exp(THREE.MathUtils.clamp(delta, -400, 400) * 0.0016),
           2.2,
           400,
-        ),
+        );
+      // Zoom toward the point under the pointer, as maps do, instead of the screen centre.
+      const point = pointUnder(event.clientX, event.clientY),
+        target = (
+          remaining.current > 0 ? aim.current : controls.current.target
+        ).clone();
+      if (point && next < distance) target.lerp(point, 1 - next / distance);
+      move(target, next);
+    };
+    // Double-click flies to the point under the pointer.
+    const dbl = (event: MouseEvent) => {
+      if (event.target !== gl.domElement || !controls.current) return;
+      const point = pointUnder(event.clientX, event.clientY);
+      if (!point) return;
+      interacted.current = true;
+      const distance = camera.position.distanceTo(controls.current.target);
+      move(point, Math.max(4, distance * 0.55));
+    };
+    // Arrow keys orbit, Shift+arrows pan, so the drawing can be explored without a mouse.
+    const key = (event: KeyboardEvent) => {
+      if (!controls.current || event.metaKey || event.ctrlKey || event.altKey)
+        return;
+      if (
+        (event.target as HTMLElement)?.matches?.(
+          "input,textarea,select,[contenteditable=true],[role=slider],input[type=range]",
+        )
+      )
+        return;
+      if (useRepo.getState().view !== "Explore") return;
+      const dirs: Record<string, [number, number]> = {
+        ArrowLeft: [-1, 0],
+        ArrowRight: [1, 0],
+        ArrowUp: [0, -1],
+        ArrowDown: [0, 1],
+      };
+      const d = dirs[event.key];
+      if (!d) return;
+      event.preventDefault();
+      interacted.current = true;
+      const target = controls.current.target.clone(),
+        offset = camera.position.clone().sub(target),
+        distance = offset.length();
+      if (event.shiftKey) {
+        const right = new THREE.Vector3().setFromMatrixColumn(
+            camera.matrixWorld,
+            0,
+          ),
+          up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1),
+          step = distance * 0.12;
+        target
+          .add(right.multiplyScalar(d[0] * step))
+          .add(up.multiplyScalar(-d[1] * step));
+        move(target, distance);
+        return;
+      }
+      const spherical = new THREE.Spherical().setFromVector3(offset);
+      spherical.theta -= d[0] * 0.26;
+      spherical.phi = THREE.MathUtils.clamp(
+        spherical.phi + d[1] * 0.2,
+        0.15,
+        Math.PI - 0.15,
       );
+      const position = new THREE.Vector3()
+        .setFromSpherical(spherical)
+        .add(target);
+      aim.current.copy(target);
+      destination.current.copy(position);
+      distanceGoal.current = distance;
+      remaining.current = reducedMotion ? 0 : 0.5;
+      if (reducedMotion) {
+        camera.position.copy(position);
+        controls.current.update();
+      }
     };
     gl.domElement.addEventListener("wheel", wheel, {
       passive: false,
       capture: true,
     });
-    return () => gl.domElement.removeEventListener("wheel", wheel, true);
+    gl.domElement.addEventListener("dblclick", dbl);
+    window.addEventListener("keydown", key);
+    return () => {
+      gl.domElement.removeEventListener("wheel", wheel, true);
+      gl.domElement.removeEventListener("dblclick", dbl);
+      window.removeEventListener("keydown", key);
+    };
   }, [gl, camera, reducedMotion]);
   useFrame((_, dt) => {
     if (remaining.current <= 0 || !controls.current) return;
@@ -1215,7 +1516,11 @@ function Camera({ layout }: { layout: Layout }) {
         remaining.current = 0;
         distanceGoal.current = null;
         interacted.current = true;
+        gl.domElement.closest(".graph-canvas")?.classList.add("moving");
       }}
+      onEnd={() =>
+        gl.domElement.closest(".graph-canvas")?.classList.remove("moving")
+      }
       makeDefault
       enableDamping
       dampingFactor={0.1}

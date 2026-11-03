@@ -17,10 +17,19 @@ import {
 } from "lucide-react";
 import { pipelineDepths } from "../../../packages/core/src/pipeline";
 import { useRepo } from "./state";
+import {
+  ArchitectureDiagram,
+  FlowDiagram,
+  PipelinesWithScripts,
+} from "./Diagrams";
 const descriptions = {
   Dependencies: "Understand which files and packages depend on each other.",
   Functions: "Find definitions and follow statically resolved calls.",
-  Pipelines: "Explore workflow dependencies, run results and individual steps.",
+  Pipelines:
+    "Explore workflow dependencies, run results, steps and the npm scripts they run.",
+  Flow: "Follow what a function calls, or what a file imports, step by step.",
+  Architecture:
+    "Folders as boxes, linked by how many resolved imports cross between them.",
 };
 export function AnalysisWorkspace() {
   const { view } = useRepo();
@@ -52,8 +61,12 @@ export function AnalysisWorkspace() {
         <Dependencies />
       ) : view === "Functions" ? (
         <Functions />
+      ) : view === "Flow" ? (
+        <FlowDiagram />
+      ) : view === "Architecture" ? (
+        <ArchitectureDiagram />
       ) : (
-        <Pipelines />
+        <PipelinesWithScripts />
       )}
     </section>
   );
@@ -353,7 +366,7 @@ function Functions() {
     </div>
   );
 }
-function Pipelines() {
+export function Pipelines() {
   const { snapshot } = useRepo(),
     jobs = snapshot.pipeline.jobs,
     [selectedId, setSelected] = useState<string | null>(null),

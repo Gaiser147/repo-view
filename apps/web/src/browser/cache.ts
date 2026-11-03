@@ -1,5 +1,5 @@
 import type { RepoSnapshot } from "../../../../packages/core/src/index";
-const version = "pages-v2",
+const version = "pages-v3",
   MAX_BLOB_BYTES = 20 * 1024 * 1024;
 let connection: Promise<IDBDatabase> | undefined;
 function database(): Promise<IDBDatabase> {

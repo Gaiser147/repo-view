@@ -1,4 +1,8 @@
 import type { Commit, RepoSnapshot } from "../../../packages/core/src/index";
+import {
+  toCompareResult,
+  type CompareResult,
+} from "../../../packages/core/src/github-public";
 import { Worker } from "node:worker_threads";
 import { killCommand } from "./process";
 import { fileURLToPath } from "node:url";
@@ -10,6 +14,7 @@ export interface RepositoryProvider {
   defaultBranch?(repository: string): Promise<string>;
   shutdown?(): void;
   commits(repository: string, ref?: string, page?: number): Promise<Commit[]>;
+  compare?(repository: string, base: string, head: string): Promise<CompareResult>;
   analyze(
     repository: string,
     ref?: string,
@@ -71,6 +76,13 @@ export const provider: RepositoryProvider = {
       date: c.commit.author?.date ?? "",
       author: c.commit.author?.name ?? "Unknown",
     }));
+  },
+  async compare(repository, base, head) {
+    return toCompareResult(
+      await github<any>(
+        `repos/${repository}/compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}?per_page=100`,
+      ),
+    );
   },
   async analyze(repository, ref, onProgress) {
     const meta = await github<any>(`repos/${repository}`);
