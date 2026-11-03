@@ -6,7 +6,6 @@ import {
   Focus,
   X,
   ArrowUpRight,
-  GitBranch,
   ShieldCheck,
   ExternalLink,
   CircleAlert,
@@ -15,7 +14,6 @@ import {
 } from "lucide-react";
 import type { CodeNode } from "../../../packages/core/src/index";
 import { rateSnapshot } from "../../../packages/core/src/health";
-import { groupColor } from "./colors";
 import { useRepo } from "./state";
 const number = (n: number) =>
   new Intl.NumberFormat("en", {
@@ -61,8 +59,7 @@ function Branch({ tree, level = 0 }: { tree: Tree; level?: number }) {
   );
 }
 export function Files() {
-  const { snapshot, filesOpen, focus, set } = useRepo();
-  const groups = snapshot.nodes.filter((n) => n.kind === "package");
+  const { snapshot, filesOpen, set } = useRepo();
   const trees = useMemo(() => {
     const root: Tree = { name: "root", path: "", children: new Map() };
     for (const node of snapshot.nodes.filter((n) => n.kind === "file")) {
@@ -85,7 +82,7 @@ export function Files() {
   return (
     <aside className="files-panel" aria-label="Files">
       <div className="panel-heading">
-        <span>EXPLORER</span>
+        <span>Files</span>
         <span className="subtle">
           {snapshot.nodes.filter((n) => n.kind === "file").length}
         </span>
@@ -100,32 +97,6 @@ export function Files() {
       <div className="repo-tree scroll-area">
         {trees.map((t) => (
           <Branch key={t.path} tree={t} />
-        ))}
-      </div>
-      <div className="package-focus">
-        <div className="panel-heading">SPATIAL GROUPS</div>
-        {groups.map((p) => (
-          <div key={p.id} className="group-row">
-            <button onClick={() => useRepo.getState().select(p.id)}>
-              <i
-                style={{
-                  background: groupColor(
-                    p.group,
-                    groups.map((g) => g.group),
-                  ),
-                }}
-              />
-              {p.name}
-            </button>
-            <button
-              className={`icon-button ${focus === p.group ? "active" : ""}`}
-              title="Focus this group"
-              aria-label={`Focus ${p.group}`}
-              onClick={() => useRepo.getState().focusGroup(p.group)}
-            >
-              <Focus size={14} />
-            </button>
-          </div>
         ))}
       </div>
     </aside>
@@ -170,7 +141,7 @@ function Health() {
         </div>
       ))}
       <div className="section-heading">
-        EVIDENCE <span>{health.findings.length}</span>
+        Evidence <span>{health.findings.length}</span>
       </div>
       {health.findings.slice(0, 30).map((f, i) => (
         <details className="finding" key={i}>
@@ -213,18 +184,14 @@ export function Inspector() {
         (e.source === selectedId || e.target === selectedId) &&
         e.kind !== "contains",
     );
-  const packageNodes = snapshot.nodes.filter((n) => n.kind === "package");
-  if (!useRepo.getState().inspectorOpen) return null;
+  const history = useRepo((s) => s.history),
+    fileHistory = node ? history?.files.get(node.path) : undefined;
+  if (!useRepo.getState().inspectorOpen || (!node && inspector !== "health"))
+    return null;
   return (
     <aside className="inspector is-open" aria-label="Inspector">
       <div className="panel-heading">
-        <span>
-          {inspector === "health"
-            ? "HEALTH REPORT"
-            : node
-              ? "INSPECTOR"
-              : "REPOSITORY OVERVIEW"}
-        </span>
+        <span>{inspector === "health" ? "Health report" : "Inspector"}</span>
         {snapshot.demo && <span className="demo-tag">DEMO</span>}
         <button
           aria-label="Close inspector"
@@ -295,6 +262,17 @@ export function Inspector() {
                     <dt>Relationships</dt>
                     <dd>{relations.length}</dd>
                   </div>
+                  {node.kind === "file" && history && (
+                    <div>
+                      <dt>Changes in opened commits</dt>
+                      <dd>
+                        {fileHistory?.changes ?? 0}
+                        {fileHistory?.lastAuthor && (
+                          <small> · last by {fileHistory.lastAuthor}</small>
+                        )}
+                      </dd>
+                    </div>
+                  )}
                 </dl>
                 {node.kind === "package" && (
                   <button
@@ -306,7 +284,7 @@ export function Inspector() {
                   </button>
                 )}
                 <div className="section-heading">
-                  {node.kind === "package" ? "FILES" : "FUNCTIONS"}{" "}
+                  {node.kind === "package" ? "Files" : "Functions"}{" "}
                   <span>{children.length}</span>
                 </div>
                 {children.slice(0, limit).map((n) => (
@@ -337,7 +315,7 @@ export function Inspector() {
             ) : (
               <>
                 <div className="section-heading">
-                  CONNECTED ELEMENTS <span>{relations.length}</span>
+                  Connected elements <span>{relations.length}</span>
                 </div>
                 {relations.slice(0, limit).map((e) => {
                   const target = snapshot.nodes.find(
@@ -391,85 +369,7 @@ export function Inspector() {
               </a>
             )}
           </>
-        ) : (
-          <>
-            <div className="overview-mark">
-              <GitBranch size={22} />
-            </div>
-            <h2>
-              One repository.
-              <br />A new perspective.
-            </h2>
-            <p className="muted small">
-              Follow the connections. Unfold the architecture. See how your code
-              evolves.
-            </p>
-            <dl className="properties overview-properties">
-              <div>
-                <dt>Files</dt>
-                <dd>
-                  {number(
-                    snapshot.nodes.filter((n) => n.kind === "file").length,
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt>Lines of code</dt>
-                <dd>
-                  {number(
-                    snapshot.nodes
-                      .filter((n) => n.kind === "file")
-                      .reduce((s, n) => s + n.loc, 0),
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt>Functions</dt>
-                <dd>
-                  {number(
-                    snapshot.nodes.filter((n) => n.kind === "function").length,
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt>Dependencies</dt>
-                <dd>{snapshot.dependencies.length}</dd>
-              </div>
-            </dl>
-            <div className="section-heading">CODEBASE GROUPS</div>
-            {packageNodes.map((p) => (
-              <button
-                className="overview-group"
-                key={p.id}
-                onClick={() => select(p.id)}
-              >
-                <span>
-                  <i
-                    style={{
-                      background: groupColor(
-                        p.group,
-                        packageNodes.map((n) => n.group),
-                      ),
-                    }}
-                  />
-                  {p.name}
-                </span>
-                <span>
-                  {number(p.loc)}
-                  <ChevronRight size={13} />
-                </span>
-              </button>
-            ))}
-            <div className="inspector-tip">
-              <Focus size={16} />
-              <p>
-                Click a point to inspect a file.
-                <br />
-                Use <b>Layers</b> to reveal structure.
-              </p>
-            </div>
-          </>
-        )}
+        ) : null}
         {snapshot.coverage.partial && (
           <p className="coverage-note">
             Partial analysis · {snapshot.coverage.skipped} files skipped.

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 test("groups can be isolated in Layers and restored, while the distant cloud retains files", async ({
   page,
 }) => {

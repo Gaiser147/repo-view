@@ -83,7 +83,7 @@ test("Pages subpath loads assets and analyzes a public repo without an API serve
   await page
     .getByRole("searchbox", { name: "Search repository" })
     .fill("hello");
-  await page.getByRole("button", { name: /hello/ }).first().click();
+  await page.getByRole("option", { name: /hello/ }).first().click();
   await expect(
     page.getByRole("complementary", { name: "Inspector" }),
   ).toContainText("hello");

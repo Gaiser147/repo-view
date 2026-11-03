@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 test("renders a deterministic 5,000-file repository without losing interaction", async ({
   page,
 }) => {
@@ -35,7 +35,7 @@ test("renders a deterministic 5,000-file repository without losing interaction",
       coverage: { ...base.coverage, total: 5000, analyzed: 5000 },
     });
   });
-  await expect(page.getByText("5K files", { exact: false })).toBeVisible();
+  await expect(page.getByText("5,000 files", { exact: false })).toBeVisible();
   await page.waitForTimeout(1500);
   const fps = await page.evaluate(
     () =>

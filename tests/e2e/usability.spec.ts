@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, returning } from "./fixtures";
 test("graph labels retain selection, zoom reveals detail, and panels can be hidden", async ({
   page,
 }) => {
@@ -32,8 +32,26 @@ test("analysis views are closeable workspaces and tablet controls fit", async ({
 }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
   await page.goto("/");
-  for (const view of ["Dependencies", "Functions", "Pipelines"]) {
-    await page.getByRole("button", { name: view, exact: true }).click();
+  const open = {
+    Dependencies: async () => {
+      await page
+        .getByRole("button", { name: "Dependencies", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: "All imports and packages" })
+        .click();
+    },
+    Functions: async () => {
+      await page
+        .getByRole("button", { name: "Dependencies", exact: true })
+        .click();
+      await page.getByRole("button", { name: "Function calls" }).click();
+    },
+    Pipelines: () =>
+      page.getByRole("button", { name: "Pipelines", exact: true }).click(),
+  };
+  for (const view of ["Dependencies", "Functions", "Pipelines"] as const) {
+    await open[view]();
     await expect(
       page.getByRole("region", { name: `${view} workspace` }),
     ).toBeVisible();
@@ -118,6 +136,7 @@ test("tablet pinch zooms without selecting and panels use a single drawer", asyn
     hasTouch: true,
     isMobile: true,
   });
+  await context.addInitScript(returning);
   const page = await context.newPage();
   await page.goto("/");
   await page.waitForFunction(() => (window as any).__repoViewGraph?.controls);
@@ -157,7 +176,7 @@ test("tablet pinch zooms without selecting and panels use a single drawer", asyn
   await expect(
     page.getByRole("complementary", { name: "Files" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Toggle inspector" }).click();
+  await page.getByRole("button", { name: "Repository health" }).click();
   await expect(
     page.getByRole("complementary", { name: "Inspector" }),
   ).toBeVisible();

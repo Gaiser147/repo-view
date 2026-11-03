@@ -16,7 +16,45 @@ import {
   type WarmState,
 } from "./history-cache";
 import { cachedSnapshot, cacheSnapshot } from "./browser/cache";
+import { fileHistory, type History } from "../../../packages/core/src/insights";
+import type { Theme } from "./colors";
 export type View = "Explore" | "Dependencies" | "Functions" | "Pipelines";
+export type Lens =
+  | "architecture"
+  | "hotspots"
+  | "dependencies"
+  | "evolution"
+  | "pipelines"
+  | "authors";
+export type ColorMode =
+  | "module"
+  | "complexity"
+  | "language"
+  | "changes"
+  | "hotspots"
+  | "authors";
+export const lenses: { id: Lens; name: string; question: string }[] = [
+  {
+    id: "architecture",
+    name: "Architecture",
+    question: "How is it organized?",
+  },
+  { id: "hotspots", name: "Hotspots", question: "Where is the risk?" },
+  {
+    id: "dependencies",
+    name: "Dependencies",
+    question: "What relies on what?",
+  },
+  { id: "evolution", name: "Evolution", question: "What changed, when?" },
+  { id: "pipelines", name: "Pipelines", question: "How does it ship?" },
+  { id: "authors", name: "Authors", question: "Who works where?" },
+];
+const lensColor: Partial<Record<Lens, ColorMode>> = {
+  hotspots: "hotspots",
+  evolution: "changes",
+  authors: "authors",
+  dependencies: "module",
+};
 export type CameraAction = "in" | "out" | "fit" | "locate";
 interface PanelState {
   filesOpen: boolean;
@@ -34,7 +72,16 @@ interface State extends PanelState {
   isolateFocus: boolean;
   layout: "cloud" | "layers";
   view: View;
-  color: "module" | "complexity" | "language" | "changes";
+  color: ColorMode;
+  lens: Lens;
+  architectureColor: "module" | "complexity" | "language";
+  theme: Theme;
+  compareBase: string | null;
+  diffBase: string | null;
+  history: History | null;
+  historyRepository: string;
+  started: boolean;
+  toast: string | null;
   metric: "loc" | "bytes";
   paused: boolean;
   lowPower: boolean;
@@ -68,7 +115,31 @@ interface State extends PanelState {
   requestCamera: (action: CameraAction, nodeId?: string) => void;
   locate: (id: string) => void;
   focusGroup: (group: string) => void;
+  setLens: (lens: Lens) => void;
 }
+function stored(key: string) {
+  try {
+    return typeof localStorage === "undefined"
+      ? null
+      : localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+export function store(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* Storage is a convenience; the app works without it. */
+  }
+}
+const initialTheme: Theme =
+  stored("repo-view:theme") === "whiteprint" ||
+  (stored("repo-view:theme") === null &&
+    typeof matchMedia !== "undefined" &&
+    matchMedia("(prefers-color-scheme: light)").matches)
+    ? "whiteprint"
+    : "cyanotype";
 const narrow = () => typeof innerWidth !== "undefined" && innerWidth < 1200;
 const initial = createDemoSnapshot(49),
   memory = new SnapshotMemory(),
@@ -89,6 +160,18 @@ export const useRepo = create<State>((set, get) => ({
   layout: "cloud",
   view: "Explore",
   color: "module",
+  lens: "architecture",
+  architectureColor: "module",
+  theme: initialTheme,
+  compareBase: null,
+  diffBase: null,
+  history: null,
+  historyRepository: "",
+  started:
+    stored("repo-view:started") === "1" ||
+    (typeof location !== "undefined" &&
+      new URLSearchParams(location.search).has("repo")),
+  toast: null,
   metric: "loc",
   paused: false,
   lowPower: false,
@@ -96,7 +179,7 @@ export const useRepo = create<State>((set, get) => ({
     typeof matchMedia !== "undefined" &&
     matchMedia("(prefers-reduced-motion: reduce)").matches,
   playing: false,
-  filesOpen: typeof window === "undefined" || window.innerWidth >= 1200,
+  filesOpen: false,
   inspectorOpen: false,
   historyOpen: true,
   ciOpen: false,
@@ -119,6 +202,22 @@ export const useRepo = create<State>((set, get) => ({
   prefetchEnabled: !saveData,
   snapshotSource: "analysis",
   set: (patch) => set(patch),
+  setLens: (lens) => {
+    const current = get();
+    if (lens === "pipelines") {
+      set({ lens });
+      if (current.view !== "Pipelines") current.toggleView("Pipelines");
+      return;
+    }
+    if (current.view !== "Explore") current.toggleView("Explore");
+    set({
+      lens,
+      color: lensColor[lens] ?? current.architectureColor,
+    });
+    if (lens === "hotspots" || lens === "authors" || lens === "evolution")
+      void refreshHistory();
+    if (lens === "evolution") void diffWithParent();
+  },
   select: (id) => {
     const node = get().snapshot.nodes.find((n) => n.id === id);
     set({
@@ -169,6 +268,9 @@ export const useRepo = create<State>((set, get) => ({
     } else if (next === "Explore")
       set({
         view: next,
+        ...(current.lens === "pipelines"
+          ? { lens: "architecture", color: current.architectureColor }
+          : {}),
         ...current.viewPanelRestore,
         viewPanelRestore: null,
         query: "",
@@ -223,6 +325,8 @@ export const useRepo = create<State>((set, get) => ({
       previousSnapshot: same ? prev : null,
       commits: commits ?? get().commits,
       diff,
+      diffBase: same ? prev.sha : null,
+      compareBase: null,
       selectedId:
         same && s.nodes.some((n) => n.id === selected) ? selected : null,
       focus:
@@ -511,4 +615,127 @@ export async function loadOlderCommits() {
     )
       state.set({ error: (e as Error).message });
   }
+}
+
+const demoSnapshots = new Map<string, RepoSnapshot>();
+function demoSnapshot(sha: string) {
+  let value = demoSnapshots.get(sha) ?? memory.get(initial.repository, sha);
+  if (!value) {
+    const index = [...demoCommits].reverse().findIndex((c) => c.sha === sha);
+    if (index < 0) return undefined;
+    value = createDemoSnapshot(index);
+  }
+  demoSnapshots.set(sha, value);
+  return value;
+}
+/** Returns a snapshot without displaying it: memory, then browser cache, then analysis. */
+export async function getSnapshot(
+  repository: string,
+  sha: string,
+  signal?: AbortSignal,
+): Promise<RepoSnapshot> {
+  const s = useRepo.getState();
+  if (s.snapshot.demo && repository === s.snapshot.repository) {
+    const value = demoSnapshot(sha);
+    if (value) return value;
+  }
+  const known =
+    memory.get(repository, sha) ?? (await cachedSnapshot(repository, sha));
+  if (known) return known;
+  const value = await requestSnapshot(repository, sha, signal);
+  await remember(value);
+  return value;
+}
+let historyTicket = 0;
+/** Rebuilds change counts and last authors from every snapshot that is already known. Never downloads. */
+export async function refreshHistory() {
+  const ticket = ++historyTicket,
+    s = useRepo.getState(),
+    repository = s.snapshot.repository,
+    found = new Map<string, RepoSnapshot>();
+  for (const c of s.commits) {
+    const value = s.snapshot.demo
+      ? demoSnapshot(c.sha)
+      : c.sha === s.snapshot.sha
+        ? s.snapshot
+        : (memory.get(repository, c.sha) ??
+          (await cachedSnapshot(repository, c.sha).catch(() => undefined)));
+    if (value) found.set(c.sha, value);
+    if (ticket !== historyTicket) return;
+  }
+  if (ticket !== historyTicket) return;
+  useRepo.getState().set({
+    history: fileHistory(s.commits, (sha) => found.get(sha)),
+    historyRepository: repository,
+  });
+}
+/** Displays `to` and marks every difference from `from`. Both snapshots load atomically before anything changes. */
+export async function compareCommits(from: string, to: string) {
+  const s = useRepo.getState(),
+    repository = s.snapshot.repository,
+    order = (sha: string) => s.commits.findIndex((c) => c.sha === sha);
+  if (from === to) return;
+  if (order(from) < order(to)) [from, to] = [to, from];
+  s.set({ playing: false, pending: true, progress: "Loading base revision…" });
+  try {
+    const base = await getSnapshot(repository, from);
+    if (useRepo.getState().snapshot.repository !== repository) return;
+    if (useRepo.getState().snapshot.sha !== to) {
+      useRepo.getState().set({ progress: "Loading compared revision…" });
+      await loadCommit(to);
+    }
+    const now = useRepo.getState();
+    if (now.snapshot.sha !== to) return;
+    now.set({
+      previousSnapshot: base,
+      diff: compareSnapshots(base, now.snapshot),
+      diffBase: from,
+      compareBase: from,
+      pending: false,
+      lens: "evolution",
+      color: "changes",
+    });
+    if (now.view !== "Explore") now.toggleView("Explore");
+    void refreshHistory();
+  } catch (e) {
+    useRepo.getState().set({
+      pending: false,
+      error: e instanceof Error ? e.message : "Comparison failed.",
+    });
+  }
+}
+export function clearCompare() {
+  useRepo
+    .getState()
+    .set({
+      compareBase: null,
+      diff: null,
+      diffBase: null,
+      previousSnapshot: null,
+    });
+}
+
+/**
+ * Evolution reads best against the parent commit. Uses only snapshots that are
+ * already known (demo, memory or browser cache) and never starts a download.
+ */
+export async function diffWithParent() {
+  const s = useRepo.getState();
+  if (s.compareBase) return;
+  const i = s.commits.findIndex((c) => c.sha === s.snapshot.sha),
+    parent = s.commits[i + 1];
+  if (i < 0 || !parent || s.diffBase === parent.sha) return;
+  const repository = s.snapshot.repository,
+    sha = s.snapshot.sha,
+    base = s.snapshot.demo
+      ? demoSnapshot(parent.sha)
+      : (memory.get(repository, parent.sha) ??
+        (await cachedSnapshot(repository, parent.sha).catch(() => undefined)));
+  const now = useRepo.getState();
+  if (!base || now.snapshot.sha !== sha || now.compareBase) return;
+  now.set({
+    previousSnapshot: base,
+    diff: compareSnapshots(base, now.snapshot),
+    diffBase: parent.sha,
+  });
 }

@@ -1,59 +1,53 @@
-import { BranchSwitcher, GroupVisibility } from "./ExplorationControls";
+import { BranchSwitcher } from "./ExplorationControls";
 import { AnalysisWorkspace } from "./Workspaces";
-import { lazy, Suspense, useEffect, useMemo, useState, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
-  ArrowUpRight,
-  Box,
-  Braces,
-  Check,
+  ArrowRight,
   ChevronDown,
   CircleHelp,
-  Command,
+  Crosshair,
   Cuboid,
+  Download,
   Focus,
-  GitFork as Github,
-  Layers3,
-  ListTree,
+  GitFork,
+  Link2,
   LoaderCircle,
   Maximize2,
   Minimize2,
-  Crosshair,
-  History,
-  PanelRight,
-  Network,
+  Moon,
   Pause,
   Play,
-  Search,
   Settings2,
   ShieldCheck,
-  Workflow,
+  Sun,
   X,
-  Zap,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
 import { rateSnapshot } from "../../../packages/core/src/health";
-import { hash } from "../../../packages/core/src/layout";
 import {
   useRepo,
-  loadRepository,
   openDemo,
-  json,
   scheduleWarmup,
   stopWarmup,
-  type View,
+  refreshHistory,
+  diffWithParent,
+  lenses,
+  store,
 } from "./state";
 import { Files, Inspector } from "./Panels";
-import { Timeline, PipelineStrip } from "./Timeline";
+import { Timeline } from "./Timeline";
+import { LensBar, LensCard } from "./Lens";
+import { CommandPalette, type PaletteAction } from "./CommandPalette";
+import { StartScreen, rememberRepository } from "./StartScreen";
+import { Hints } from "./Hints";
+import { HoverCard } from "./HoverCard";
+import { readUrl, shareUrl, writeUrl } from "./url-state";
+import { exportPng } from "./export-png";
+import { inks } from "./colors";
 const Graph = lazy(() => import("./Graph").then((m) => ({ default: m.Graph })));
-const nav = [
-  { name: "Explore", icon: Network },
-  { name: "Dependencies", icon: Box },
-  { name: "Functions", icon: Braces },
-  { name: "Pipelines", icon: Workflow },
-] as const;
+
 export function App() {
   const root = useRef<HTMLDivElement>(null);
   async function fullscreen() {
@@ -65,7 +59,7 @@ export function App() {
         await root.current.requestFullscreen();
       else if (document.fullscreenElement) await document.exitFullscreen();
     } catch {
-      /* Immersive layout also works when native fullscreen is unavailable. */
+      /* The expanded layout also works when native fullscreen is unavailable. */
     }
   }
   useEffect(() => {
@@ -81,49 +75,81 @@ export function App() {
     return () => document.removeEventListener("fullscreenchange", change);
   }, []);
   const state = useRepo(),
-    {
-      snapshot,
-      view,
-      layout,
-      focus,
-      set,
-      query,
-      selectedId,
-      select,
-      pending,
-      error,
-    } = state;
-  const [repoForm, setRepoForm] = useState(false),
-    [repository, setRepository] = useState(""),
-    [branch, setBranch] = useState(""),
+    { snapshot, view, focus, set, pending, error, theme, started, toast } =
+      state;
+  const [picker, setPicker] = useState(!started),
     [settings, setSettings] = useState(false),
-    [help, setHelp] = useState(false),
-    [ruleText, setRuleText] = useState(""),
-    [dependencyLimit, setDependencyLimit] = useState(60);
-  const health = useMemo(() => rateSnapshot(snapshot), [snapshot]),
-    files = snapshot.nodes.filter((n) => n.kind === "file"),
-    functions = snapshot.nodes.filter((n) => n.kind === "function"),
-    matches = useMemo(
-      () =>
-        query.trim()
-          ? snapshot.nodes
-              .filter(
-                (n) =>
-                  (n.kind !== "package" &&
-                    n.path.toLowerCase().includes(query.toLowerCase())) ||
-                  (query.trim() &&
-                    n.kind === "function" &&
-                    n.name.toLowerCase().includes(query.toLowerCase())),
-              )
-              .slice(0, 12)
-          : [],
-      [snapshot, query],
-    );
-  const apiHealth = useQuery({
-    queryKey: ["api-health"],
-    queryFn: () => json<{ status: string }>("/api/health"),
-    retry: false,
-  });
+    [ruleText, setRuleText] = useState("");
+  const health = useMemo(() => rateSnapshot(snapshot), [snapshot]);
+  const notify = (message: string) => {
+    set({ toast: message });
+    setTimeout(() => {
+      if (useRepo.getState().toast === message) set({ toast: null });
+    }, 2600);
+  };
+  async function share() {
+    const url = shareUrl();
+    try {
+      await navigator.clipboard.writeText(url);
+      notify("Link copied. It opens this exact view.");
+    } catch {
+      notify(url);
+    }
+  }
+  async function exportImage() {
+    try {
+      await exportPng();
+      notify("PNG exported with its title block.");
+    } catch (e) {
+      notify(e instanceof Error ? e.message : "Export failed.");
+    }
+  }
+  const toggleTheme = () => {
+    const next =
+      useRepo.getState().theme === "cyanotype" ? "whiteprint" : "cyanotype";
+    set({ theme: next });
+    store("repo-view:theme", next);
+  };
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", inks[theme].ground);
+  }, [theme]);
+  // Restore a shared view once, then keep the address in step with what is on screen.
+  useEffect(() => {
+    void readUrl().then((found) => {
+      if (found) {
+        set({ started: true });
+        setPicker(false);
+      }
+    });
+    let timer: ReturnType<typeof setTimeout>;
+    const unsubscribe = useRepo.subscribe((s, p) => {
+      if (
+        s.snapshot !== p.snapshot ||
+        s.lens !== p.lens ||
+        s.layout !== p.layout ||
+        s.selectedId !== p.selectedId ||
+        s.compareBase !== p.compareBase ||
+        s.focus !== p.focus ||
+        s.started !== p.started
+      ) {
+        clearTimeout(timer);
+        timer = setTimeout(writeUrl, 250);
+      }
+      if (s.snapshot.repository !== p.snapshot.repository && !s.snapshot.demo)
+        rememberRepository(s.snapshot.repository);
+    });
+    return () => {
+      unsubscribe();
+      clearTimeout(timer);
+    };
+  }, []);
+  useEffect(() => {
+    void refreshHistory();
+    if (useRepo.getState().lens === "evolution") void diffWithParent();
+  }, [snapshot.repository, snapshot.sha, state.commits, state.cachedCommits]);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const plain = !e.ctrlKey && !e.metaKey && !e.altKey;
@@ -132,31 +158,28 @@ export function App() {
       );
       if (e.key === "Escape") {
         const current = useRepo.getState();
-        if (current.expanded) {
-          void fullscreen();
-        } else if (current.focus) current.set({ focus: null });
-        else if (current.view !== "Explore") current.toggleView("Explore");
-        else current.set({ inspectorOpen: false });
-        set({ query: "" });
-        setRepoForm(false);
         setSettings(false);
-        setHelp(false);
+        if (!current.started) return;
+        if (picker) setPicker(false);
+        else if (current.expanded) void fullscreen();
+        else if (current.focus) current.set({ focus: null });
+        else if (current.view !== "Explore") current.toggleView("Explore");
+        else if (current.filesOpen && innerWidth < 1200)
+          current.set({ filesOpen: false });
+        else current.set({ inspectorOpen: false, selectedId: null });
+        return;
       }
-      if (!editable && plain && (e.key === "+" || e.key === "=")) {
+      if (editable || !plain) return;
+      if (e.key === "+" || e.key === "=") {
         e.preventDefault();
         useRepo.getState().requestCamera("in");
-      }
-      if (!editable && plain && e.key === "-") {
+      } else if (e.key === "-") {
         e.preventDefault();
         useRepo.getState().requestCamera("out");
-      }
-      if (!editable && plain && e.key === "0")
-        useRepo.getState().requestCamera("fit");
-      if (!editable && plain && e.key.toLowerCase() === "f") void fullscreen();
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        document.getElementById("repo-search")?.focus();
-      }
+      } else if (e.key === "0") useRepo.getState().requestCamera("fit");
+      else if (e.key.toLowerCase() === "f") void fullscreen();
+      else if (/^[1-6]$/.test(e.key))
+        useRepo.getState().setLens(lenses[Number(e.key) - 1].id);
     };
     window.addEventListener("keydown", handler);
     const media = matchMedia("(prefers-reduced-motion: reduce)"),
@@ -166,7 +189,7 @@ export function App() {
       window.removeEventListener("keydown", handler);
       media.removeEventListener("change", change);
     };
-  }, [set]);
+  }, [set, picker]);
   useEffect(() => {
     scheduleWarmup();
     const visibility = () => {
@@ -185,36 +208,64 @@ export function App() {
     state.pending,
     state.playing,
   ]);
-  function submitRepo(e: React.FormEvent) {
-    e.preventDefault();
-    let input = repository
-      .trim()
-      .replace(/\.git\/?$/, "")
-      .replace(/\/$/, "");
-    if (input.startsWith("https://github.com/")) input = input.slice(19);
-    if (
-      !/^[A-Za-z0-9][A-Za-z0-9_-]*\/[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(input)
-    ) {
-      set({ error: "Enter a public github.com/owner/repository URL." });
-      return;
-    }
-    setRepoForm(false);
-    void loadRepository(
-      input,
-      branch.trim() || undefined,
-      branch.trim() || "main",
-    );
-  }
-  const totalLOC = files.reduce((s, n) => s + n.loc, 0),
-    format = (n: number) =>
-      Intl.NumberFormat("en", {
-        notation: "compact",
-        maximumFractionDigits: 1,
-      }).format(n);
+  const actions: PaletteAction[] = [
+    {
+      id: "open",
+      label: "Open another repository",
+      run: () => setPicker(true),
+    },
+    { id: "cloud", label: "Cloud layout", run: () => set({ layout: "cloud" }) },
+    {
+      id: "layers",
+      label: "Layers layout",
+      run: () => set({ layout: "layers" }),
+    },
+    {
+      id: "fit",
+      label: "Fit drawing",
+      hint: "0",
+      run: () => state.requestCamera("fit"),
+    },
+    {
+      id: "full",
+      label: "Fullscreen",
+      hint: "F",
+      run: () => void fullscreen(),
+    },
+    { id: "files", label: "Show files", run: () => set({ filesOpen: true }) },
+    {
+      id: "health",
+      label: "Repository health",
+      run: () => set({ inspector: "health", inspectorOpen: true }),
+    },
+    { id: "share", label: "Copy link to this view", run: () => void share() },
+    { id: "png", label: "Export PNG", run: () => void exportImage() },
+    {
+      id: "theme",
+      label:
+        theme === "cyanotype"
+          ? "Switch to whiteprint (light)"
+          : "Switch to cyanotype (dark)",
+      run: toggleTheme,
+    },
+    {
+      id: "power",
+      label: state.lowPower
+        ? "Turn off performance mode"
+        : "Turn on performance mode",
+      run: () => set({ lowPower: !state.lowPower }),
+    },
+    {
+      id: "tips",
+      label: "Show tips again",
+      run: () => dispatchEvent(new Event("repo-view:hints")),
+    },
+  ];
+  const [owner, name] = snapshot.repository.split("/");
   return (
     <div
       ref={root}
-      className={`app-shell ${state.expanded ? "is-expanded" : ""}`}
+      className={`app-shell ${state.expanded ? "is-expanded" : ""} view-${view.toLowerCase()}`}
     >
       <header className="topbar">
         <a
@@ -222,172 +273,91 @@ export function App() {
           href={import.meta.env.BASE_URL}
           aria-label="repo-view home"
         >
-          <Network size={24} />
+          <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
+            <circle cx="11" cy="11" r="8.5" />
+            <path d="M1.5 11h19M11 1.5v19" />
+          </svg>
           <span>repo-view</span>
-          <span className="brand-divider" />
-          <small>See the shape of your code.</small>
         </a>
-        <nav className="primary-nav" aria-label="Main views">
-          {nav.map(({ name, icon: Icon }) => (
-            <button
-              key={name}
-              className={view === name ? "active" : ""}
-              aria-pressed={view === name}
-              onClick={() => state.toggleView(name as View)}
-            >
-              <Icon size={14} />
-              <span>{name}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="header-actions">
-          <a
-            className="icon-button github-button"
-            href="https://github.com/Gaiser147/repo-view"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Project on GitHub"
-          >
-            <Github size={18} />
-          </a>
-          <button
-            className={`icon-button ${settings ? "active" : ""}`}
-            aria-label="View settings"
-            onClick={() => {
-              setSettings(!settings);
-              setRepoForm(false);
-            }}
-          >
-            <Settings2 size={18} />
-          </button>
-          <span className="avatar">RV</span>
-        </div>
-      </header>
-      <div className="repository-bar">
         <button
           className="repository-button"
           aria-label="Open repository"
-          onClick={() => {
-            setRepoForm(!repoForm);
-            setSettings(false);
-          }}
+          onClick={() => setPicker(true)}
         >
-          <Github size={16} />
-          <span className="repo-owner">
-            {snapshot.repository.split("/")[0]}
-            <span>/</span>
-          </span>
-          <b>{snapshot.repository.split("/")[1]}</b>
+          <GitFork size={15} strokeWidth={1.6} />
+          <span className="repo-owner">{owner} /</span>
+          <b>{name}</b>
           <ChevronDown size={13} />
         </button>
-        {snapshot.demo && <span className="demo-tag">DEMO DATA</span>}
         <BranchSwitcher />
-        <div className="search-wrap">
-          <Search size={14} />
-          <input
-            id="repo-search"
-            type="search"
-            aria-label="Search repository"
-            placeholder="Search files, functions…"
-            value={query}
-            onChange={(e) => set({ query: e.target.value })}
-          />
-          <kbd>
-            <Command size={10} /> K
-          </kbd>
-          {query && (
-            <div className="search-results">
-              {matches.length ? (
-                matches.map((n) => (
-                  <button key={n.id} onClick={() => select(n.id)}>
-                    <span>
-                      {n.kind === "function" ? (
-                        <Braces size={14} />
-                      ) : (
-                        <Box size={14} />
-                      )}
-                    </span>
-                    <div>
-                      {n.name}
-                      <small>{n.path}</small>
-                    </div>
-                  </button>
-                ))
-              ) : (
-                <p>No matching files or functions.</p>
-              )}
-            </div>
-          )}
-        </div>
-        <button
-          className="health-button"
-          aria-label="Repository health"
-          onClick={() =>
-            set({
-              inspector: "health",
-              inspectorOpen: true,
-              ...(innerWidth < 1200 ? { filesOpen: false } : {}),
-            })
-          }
-        >
-          <ShieldCheck size={15} />
-          <span>Health</span>
-          <b>
-            {health.score ?? "—"}
+        {snapshot.demo && <span className="demo-tag">Demo data</span>}
+        <CommandPalette actions={actions} />
+        <div className="header-actions">
+          <button
+            className="health-button"
+            aria-label="Repository health"
+            title="Health: evidence-based structural score"
+            onClick={() =>
+              set({
+                inspector: "health",
+                inspectorOpen: true,
+                ...(innerWidth < 1200 ? { filesOpen: false } : {}),
+              })
+            }
+          >
+            <ShieldCheck size={15} strokeWidth={1.6} />
+            <b>{health.score ?? "—"}</b>
             <small>/100</small>
-          </b>
-          <ChevronDown size={12} />
-        </button>
-      </div>
-      {repoForm && (
-        <form className="repo-form" onSubmit={submitRepo}>
-          <div>
-            <label htmlFor="repository-url">Repository URL</label>
-            <input
-              id="repository-url"
-              autoFocus
-              placeholder="https://github.com/owner/repository"
-              value={repository}
-              onChange={(e) => setRepository(e.target.value)}
-            />
-          </div>
-          <div className="branch-field">
-            <label htmlFor="branch-ref">Branch / ref (optional)</label>
-            <input
-              id="branch-ref"
-              placeholder="Default branch"
-              value={branch}
-              onChange={(e) => setBranch(e.target.value)}
-            />
-          </div>
-          <button className="primary-button" type="submit" disabled={pending}>
-            {pending ? "Analyzing…" : "Analyze repository"}
-            <ArrowUpRight size={15} />
           </button>
           <button
-            type="button"
-            className="text-link"
-            onClick={() => {
-              openDemo();
-              setRepoForm(false);
-            }}
+            className="tool-button"
+            onClick={() => void exportImage()}
+            title="Export the drawing as PNG"
           >
-            Open demo
+            <Download size={15} strokeWidth={1.6} />
+            <span>Export</span>
           </button>
           <button
-            type="button"
+            className="tool-button"
+            onClick={() => void share()}
+            title="Copy a link to this exact view"
+          >
+            <Link2 size={15} strokeWidth={1.6} />
+            <span>Share</span>
+          </button>
+          <button
             className="icon-button"
-            aria-label="Close repository form"
-            onClick={() => setRepoForm(false)}
+            aria-label={
+              theme === "cyanotype"
+                ? "Switch to light whiteprint"
+                : "Switch to dark cyanotype"
+            }
+            title={
+              theme === "cyanotype" ? "Whiteprint (light)" : "Cyanotype (dark)"
+            }
+            onClick={toggleTheme}
           >
-            <X size={16} />
+            {theme === "cyanotype" ? (
+              <Sun size={16} strokeWidth={1.6} />
+            ) : (
+              <Moon size={16} strokeWidth={1.6} />
+            )}
           </button>
-        </form>
-      )}
+          <button
+            className={`icon-button ${settings ? "active" : ""}`}
+            aria-label="View settings"
+            aria-expanded={settings}
+            onClick={() => setSettings(!settings)}
+          >
+            <Settings2 size={16} strokeWidth={1.6} />
+          </button>
+        </div>
+      </header>
+      <LensBar />
       {settings && (
-        <section className="settings-panel">
+        <section className="settings-panel" aria-label="View settings">
           <div className="panel-heading">
-            VIEW SETTINGS
+            <span>View settings</span>
             <button
               className="icon-button"
               aria-label="Close settings"
@@ -397,17 +367,16 @@ export function App() {
             </button>
           </div>
           <label>
-            Color by
+            Print
             <select
-              value={state.color}
-              onChange={(e) =>
-                set({ color: e.target.value as typeof state.color })
-              }
+              value={theme}
+              onChange={(e) => {
+                set({ theme: e.target.value as typeof theme });
+                store("repo-view:theme", e.target.value);
+              }}
             >
-              <option value="module">Codebase group</option>
-              <option value="complexity">Function complexity</option>
-              <option value="language">Language</option>
-              <option value="changes">Changes since previous snapshot</option>
+              <option value="cyanotype">Cyanotype (dark)</option>
+              <option value="whiteprint">Whiteprint (light)</option>
             </select>
           </label>
           <label>
@@ -422,10 +391,10 @@ export function App() {
               <option value="bytes">File size (bytes)</option>
             </select>
           </label>
-          <label>
+          <label className="check">
             <span>
               Performance mode
-              <small>Disable bloom; reduce atmospheric particles</small>
+              <small>Plainer rendering at device pixel ratio 1</small>
             </span>
             <input
               type="checkbox"
@@ -433,7 +402,7 @@ export function App() {
               onChange={(e) => set({ lowPower: e.target.checked })}
             />
           </label>
-          <label>
+          <label className="check">
             <span>Reduced motion</span>
             <input
               type="checkbox"
@@ -441,7 +410,7 @@ export function App() {
               onChange={(e) => set({ reducedMotion: e.target.checked })}
             />
           </label>
-          <label>
+          <label className="check">
             <span>
               Prepare nearby commits
               <small>Paced background cache · up to 6 attempts per hour</small>
@@ -452,10 +421,10 @@ export function App() {
               onChange={(e) => set({ prefetchEnabled: e.target.checked })}
             />
           </label>
-          <div className="section-heading">LAYER ASSIGNMENTS</div>
+          <div className="section-heading">Layer assignments</div>
           <p className="small muted">
-            Assign groups or path globs to layers 0–3, in order. First matching
-            rule wins. Other files stay visible in Unassigned.
+            Assign groups or path globs to layers 0–3, in order. The first
+            matching rule wins. Other files stay visible in Unassigned.
           </p>
           <label>
             Group = layer, one per line
@@ -483,12 +452,17 @@ export function App() {
                 }
                 rules[g] = i;
               }
-              set({ layerRules: rules });
+              set({ layerRules: rules, layout: "layers" });
               setSettings(false);
             }}
           >
             Apply layer assignments
-            <Check size={14} />
+          </button>
+          <button
+            className="text-link"
+            onClick={() => dispatchEvent(new Event("repo-view:hints"))}
+          >
+            Show tips again
           </button>
         </section>
       )}
@@ -500,7 +474,7 @@ export function App() {
             className="text-link"
             onClick={() => {
               set({ error: null });
-              setRepoForm(true);
+              setPicker(true);
             }}
           >
             Choose repository
@@ -514,68 +488,6 @@ export function App() {
           </button>
         </div>
       )}
-      <div className="layout-bar">
-        <div
-          className="panel-toggles"
-          role="group"
-          aria-label="Workspace panels"
-        >
-          <button
-            aria-label="Toggle files"
-            aria-expanded={state.filesOpen}
-            className={state.filesOpen ? "active" : ""}
-            onClick={state.toggleFiles}
-          >
-            <ListTree size={17} />
-            <span>Files</span>
-          </button>
-          <button
-            aria-label="Toggle inspector"
-            aria-expanded={state.inspectorOpen}
-            className={state.inspectorOpen ? "active" : ""}
-            onClick={state.toggleInspector}
-          >
-            <PanelRight size={17} />
-            <span>Inspector</span>
-          </button>
-          <button
-            aria-label={state.historyOpen ? "Hide history" : "Show history"}
-            aria-expanded={state.historyOpen}
-            className={state.historyOpen ? "active" : ""}
-            onClick={() => set({ historyOpen: !state.historyOpen })}
-          >
-            <History size={17} />
-            <span>History</span>
-          </button>
-          <button
-            aria-label={state.ciOpen ? "Hide CI" : "Show CI"}
-            aria-expanded={state.ciOpen}
-            className={`ci-toggle ${state.ciOpen ? "active" : ""}`}
-            onClick={() => set({ ciOpen: !state.ciOpen })}
-          >
-            <Workflow size={17} />
-            <span>CI</span>
-          </button>
-        </div>
-        <div className="workspace-mode-actions">
-          {state.view === "Explore" && <GroupVisibility />}
-          {state.view === "Explore" && (
-            <button
-              className="expand-button"
-              aria-label={state.expanded ? "Exit fullscreen" : "Expand cloud"}
-              onClick={() => void fullscreen()}
-            >
-              {state.expanded ? (
-                <Minimize2 size={17} />
-              ) : (
-                <Maximize2 size={17} />
-              )}
-              <span>{state.expanded ? "Exit fullscreen" : "Fullscreen"}</span>
-              <kbd>F</kbd>
-            </button>
-          )}
-        </div>
-      </div>
       <main className="workbench">
         <Files />
         <section
@@ -583,44 +495,8 @@ export function App() {
           hidden={view !== "Explore"}
           aria-label="Spatial repository explorer"
         >
-          <div className="workspace-heading">
-            <div>
-              <div className="workspace-breadcrumb">
-                <span>{snapshot.repository.split("/")[1]}</span>
-                <span>/</span>
-                <span>{focus ?? "all modules"}</span>
-              </div>
-              <h1>Repository explorer</h1>
-            </div>
-            <div className="morph-control" aria-label="Spatial layout">
-              <button
-                aria-pressed={layout === "cloud"}
-                className={layout === "cloud" ? "active" : ""}
-                onClick={() => set({ layout: "cloud" })}
-              >
-                <Network size={15} />
-                Cloud
-              </button>
-              <span className="morph-connector" />
-              <button
-                aria-pressed={layout === "layers"}
-                className={layout === "layers" ? "active" : ""}
-                onClick={() => set({ layout: "layers" })}
-              >
-                <Layers3 size={15} />
-                Layers
-              </button>
-            </div>
-            <div className="spatial-status">
-              <i />
-              {focus
-                ? "Local focus"
-                : layout === "layers"
-                  ? "Layered architecture"
-                  : "Spatial overview"}
-            </div>
-          </div>
-          <div className="graph-canvas">
+          <h1 className="visually-hidden">Repository explorer</h1>
+          <div className="graph-canvas" data-hint="graph">
             <Suspense
               fallback={
                 <div className="graph-fallback">Loading spatial engine…</div>
@@ -629,27 +505,30 @@ export function App() {
               <Graph />
             </Suspense>
           </div>
-          {files.length === 0 && (
+          <LensCard />
+          <HoverCard />
+          {snapshot.nodes.every((n) => n.kind !== "file") && (
             <div className="empty-state">
-              <Cuboid size={36} />
-              <h2>This repository has room to grow.</h2>
+              <Cuboid size={32} strokeWidth={1.4} />
+              <h2>No source files at this commit</h2>
               <p>
-                No source files at this commit. Choose another repository or
-                explore the interactive demo.
+                Pick another commit in the history, open another repository or
+                explore the demo.
               </p>
               <button className="primary-button" onClick={openDemo}>
                 Explore demo
-                <ArrowUpRight size={15} />
+                <ArrowRight size={15} />
               </button>
             </div>
           )}
           {pending && (
             <div className="loading-overlay" role="status">
-              <LoaderCircle className="spin" size={17} />
+              <LoaderCircle className="spin" size={16} />
               <span>
                 {state.progress}
                 <small>
-                  Current snapshot stays visible until the next one is ready.
+                  The current revision stays on screen until the next one is
+                  ready.
                 </small>
               </span>
             </div>
@@ -666,162 +545,87 @@ export function App() {
               <kbd>Esc</kbd>
             </button>
           )}
-          <div className="graph-bottom">
-            <div className="graph-info">
-              <div className="detail-level" data-testid="graph-detail">
-                {state.graphLevel === "packages"
-                  ? "Packages"
-                  : state.graphLevel === "functions"
-                    ? "Functions"
-                    : "Files"}
-                <span>
-                  {" "}
-                  ·{" "}
-                  {state.graphLevel === "functions"
-                    ? "Tap a label or point"
-                    : "Zoom for more detail"}
-                </span>
-              </div>
-              <details className="legend-disclosure">
-                <summary>Legend</summary>
-                <div className="legend">
-                  <span>
-                    <i className="dot cyan" />
-                    {state.color === "module"
-                      ? "File / module"
-                      : state.color === "complexity"
-                        ? "Blue ≤10 · amber >10"
-                        : state.color === "language"
-                          ? "Blue TS · gold JS · mint other"
-                          : "Mint: added / changed"}
-                  </span>
-                  <span>
-                    <i className="dot mint" />
-                    Selected element
-                  </span>
-                  <span>
-                    <i className="legend-line" />
-                    Resolved connection
-                  </span>
-                  <small>
-                    Size ∝ {state.metric === "loc" ? "lines of code" : "bytes"}{" "}
-                    · glow is decorative
-                  </small>
-                </div>
-              </details>
-            </div>
-            <div className="graph-tools">
-              <button
-                className="icon-button zoom-control"
-                aria-label="Zoom out"
-                title="Zoom out (−)"
-                onClick={() => state.requestCamera("out")}
-              >
-                <ZoomOut size={19} />
-              </button>
-              <button
-                className="icon-button zoom-control"
-                aria-label="Zoom in"
-                title="Zoom in (+)"
-                onClick={() => state.requestCamera("in")}
-              >
-                <ZoomIn size={19} />
-              </button>
-              <button
-                className="icon-button"
-                aria-label={
-                  state.paused ? "Resume animation" : "Pause animation"
-                }
-                onClick={() => set({ paused: !state.paused })}
-              >
-                {state.paused ? <Play size={15} /> : <Pause size={15} />}
-              </button>
-              <span />
-              <button
-                className="icon-button"
-                aria-label="Reset camera"
-                title="Fit cloud (0)"
-                onClick={() => state.requestCamera("fit")}
-              >
-                <Crosshair size={18} />
-              </button>
-              <button
-                className="icon-button"
-                aria-label="Graph help"
-                onClick={() => setHelp(!help)}
-              >
-                <CircleHelp size={15} />
-              </button>
-            </div>
+          <div className="detail-level" data-testid="graph-detail">
+            {state.graphLevel === "packages"
+              ? "Packages"
+              : state.graphLevel === "functions"
+                ? "Functions"
+                : "Files"}
+            <span>
+              {state.graphLevel === "functions"
+                ? " · click a label or point"
+                : " · zoom in for more detail"}
+            </span>
           </div>
-          {help && (
-            <div className="help-panel">
-              <b>Explore in three dimensions</b>
-              <p>Mouse: drag to orbit, scroll to zoom, right-drag to pan.</p>
-              <p>
-                Touch: one finger to rotate, pinch to zoom, two fingers to pan.
-                Tap a node to inspect it.
-              </p>
-              <p>
-                Click a point or file to inspect. Unfold a group with Focus.
-                Switch Cloud / Layers to reorganize the same code.
-              </p>
-              <button className="text-link" onClick={() => setHelp(false)}>
-                Got it
-              </button>
-            </div>
-          )}
+          <div className="graph-tools" aria-label="Camera">
+            <button
+              className="icon-button"
+              aria-label="Zoom in"
+              title="Zoom in (+)"
+              onClick={() => state.requestCamera("in")}
+            >
+              <ZoomIn size={17} strokeWidth={1.6} />
+            </button>
+            <button
+              className="icon-button"
+              aria-label="Zoom out"
+              title="Zoom out (−)"
+              onClick={() => state.requestCamera("out")}
+            >
+              <ZoomOut size={17} strokeWidth={1.6} />
+            </button>
+            <button
+              className="icon-button"
+              aria-label="Reset camera"
+              title="Fit drawing (0)"
+              onClick={() => state.requestCamera("fit")}
+            >
+              <Crosshair size={17} strokeWidth={1.6} />
+            </button>
+            <button
+              className="icon-button"
+              aria-label={state.expanded ? "Exit fullscreen" : "Expand cloud"}
+              title="Fullscreen (F)"
+              onClick={() => void fullscreen()}
+            >
+              {state.expanded ? (
+                <Minimize2 size={17} strokeWidth={1.6} />
+              ) : (
+                <Maximize2 size={17} strokeWidth={1.6} />
+              )}
+            </button>
+            <button
+              className="icon-button"
+              aria-label={state.paused ? "Resume animation" : "Pause animation"}
+              onClick={() => set({ paused: !state.paused })}
+            >
+              {state.paused ? (
+                <Play size={15} strokeWidth={1.6} />
+              ) : (
+                <Pause size={15} strokeWidth={1.6} />
+              )}
+            </button>
+            <button
+              className="icon-button"
+              aria-label="Graph help"
+              title="Show tips again"
+              onClick={() => dispatchEvent(new Event("repo-view:hints"))}
+            >
+              <CircleHelp size={16} strokeWidth={1.6} />
+            </button>
+          </div>
         </section>
         <AnalysisWorkspace />
         <Inspector />
+        {picker && <StartScreen onClose={() => setPicker(false)} />}
       </main>
       <Timeline />
-      <PipelineStrip />
-      <footer className="statusbar">
-        <div>
-          <span
-            className={`connection-dot ${apiHealth.isError ? "offline" : ""}`}
-          />
-          {snapshot.demo
-            ? "Demo workspace"
-            : pending
-              ? "Analyzing repository"
-              : "Repository loaded"}
-          <span className="footer-divider" />
-          {format(files.length)} files<span>·</span>
-          {format(totalLOC)} LOC<span>·</span>
-          {format(functions.length)} functions
+      <Hints />
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
         </div>
-        <div>
-          {snapshot.coverage.partial ? (
-            <span className="amber">Partial analysis</span>
-          ) : (
-            <span>
-              {Math.round(
-                snapshot.coverage.total
-                  ? (snapshot.coverage.analyzed / snapshot.coverage.total) * 100
-                  : 0,
-              )}
-              % text coverage
-            </span>
-          )}
-          <span className="footer-divider" />
-          {state.lowPower ? (
-            <>
-              <Zap size={11} />
-              Performance mode
-            </>
-          ) : (
-            <>
-              <Cuboid size={11} />
-              WebGL spatial engine
-            </>
-          )}
-          <span className="footer-divider" />
-          <kbd>⌘ K</kbd>
-          <span>Search</span>
-        </div>
-      </footer>
+      )}
     </div>
   );
 }

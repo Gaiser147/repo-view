@@ -19,15 +19,16 @@ import {
 } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, OrbitControls } from "@react-three/drei";
-import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import * as THREE from "three";
 import type { Layout, Vec3 } from "../../../packages/core/src/index";
-import { hash, layoutGraph } from "../../../packages/core/src/layout";
+import { layoutGraph } from "../../../packages/core/src/layout";
 import { useRepo } from "./state";
-
-import { palette, groupColor } from "./colors";
-const vertex = `attribute float size; attribute float alpha; attribute vec3 tint; varying vec3 vTint; varying float vAlpha; void main(){ vTint=tint; vAlpha=alpha; vec4 mv=modelViewMatrix*vec4(position,1.); gl_PointSize=clamp(size*230./-mv.z,1.5,48.); gl_Position=projectionMatrix*mv; }`;
-const fragment = `varying vec3 vTint; varying float vAlpha; void main(){ float d=length(gl_PointCoord-vec2(.5))*2.; if(d>1.)discard; float core=exp(-d*d*32.);float glow=pow(1.-d,2.)*.32;gl_FragColor=vec4(vTint*(1.+core*1.5),(core+glow)*vAlpha); }`;
+import { useHover, graphCanvas } from "./hover";
+import { inks, mixHex, authorColor, groupColor } from "./colors";
+import { fileComplexity } from "../../../packages/core/src/insights";
+// Drafting marks: a stroked circle with a centre dot on a paper-filled disc. mark=1 draws a scalloped revision cloud.
+const vertex = `attribute float size; attribute float alpha; attribute float mark; attribute vec3 tint; varying vec3 vTint; varying float vAlpha; varying float vMark; varying float vPx; void main(){ vTint=tint; vAlpha=alpha; vMark=mark; vec4 mv=modelViewMatrix*vec4(position,1.); float px=clamp(size*260./-mv.z,3.,56.)*(mark>.5?1.7:1.); vPx=px; gl_PointSize=px; gl_Position=projectionMatrix*mv; }`;
+const fragment = `uniform vec3 uGround; varying vec3 vTint; varying float vAlpha; varying float vMark; varying float vPx; void main(){ vec2 q=gl_PointCoord-vec2(.5); float d=length(q)*2.; if(d>1.)discard; float aa=2.2/max(vPx,3.); float r=vMark>.5?.58:1.; float ring=smoothstep(r*.74-aa,r*.74,d)*(1.-smoothstep(r*.88,r*.88+aa,d)); float dotc=1.-smoothstep(r*.26,r*.26+aa,d); float paper=1.-smoothstep(r*.7,r*.7+aa,d); float cloud=0.; if(vMark>.5){ float a=atan(q.y,q.x); float s=.86+.07*abs(sin(a*5.)); cloud=smoothstep(s-.09-aa,s-.09,d)*(1.-smoothstep(s,s+aa,d)); } float ink=max(max(ring,dotc),cloud); float alpha=max(ink,paper*.92)*vAlpha; if(alpha<.01)discard; gl_FragColor=vec4(mix(uGround,vTint,ink),alpha); }`;
 class GraphBoundary extends Component<
   { children: ReactNode },
   { error: boolean }
@@ -69,6 +70,9 @@ function Cloud({ layout }: { layout: Layout }) {
       reducedMotion,
       layerRules,
       layout: mode,
+      theme,
+      lens,
+      history,
     } = useRepo(),
     groups = useMemo(
       () =>
@@ -91,11 +95,6 @@ function Cloud({ layout }: { layout: Layout }) {
         ...(isolateFocus && focus ? groups.filter((g) => g !== focus) : []),
       ]),
     [hiddenGroups, isolateFocus, focus, groups],
-  );
-  const dustNodes = useMemo(
-    () =>
-      snapshot.nodes.filter((n) => n.kind === "file" && !hidden.has(n.group)),
-    [snapshot, hidden],
   );
   const selected = snapshot.nodes.find((n) => n.id === selectedId),
     [detail, setDetail] = useState<DetailLevel>("files");
@@ -125,8 +124,7 @@ function Cloud({ layout }: { layout: Layout }) {
   );
   const index = useMemo(() => new Map(nodes.map((n, i) => [n.id, i])), [nodes]);
   const links = spatial.edges;
-  const dustCount = lowPower ? 600 : 2600,
-    total = nodes.length + dustCount;
+  const total = nodes.length;
   const geo = useMemo(() => {
     const g = new THREE.BufferGeometry();
     g.setAttribute(
@@ -144,6 +142,10 @@ function Cloud({ layout }: { layout: Layout }) {
     g.setAttribute(
       "alpha",
       new THREE.BufferAttribute(new Float32Array(total).fill(1), 1),
+    );
+    g.setAttribute(
+      "mark",
+      new THREE.BufferAttribute(new Float32Array(total), 1),
     );
     return g;
   }, [total]);
@@ -170,6 +172,7 @@ function Cloud({ layout }: { layout: Layout }) {
       "alpha",
       new THREE.BufferAttribute(new Float32Array(24).fill(1), 1),
     );
+    g.setAttribute("mark", new THREE.BufferAttribute(new Float32Array(24), 1));
     return g;
   }, []);
   const lineGeo = useMemo(() => {
@@ -191,6 +194,12 @@ function Cloud({ layout }: { layout: Layout }) {
     [geo],
   );
   useEffect(() => () => signalGeo.dispose(), [signalGeo]);
+  useEffect(() => {
+    const c = new THREE.Color(inks[theme].select),
+      t = signalGeo.attributes.tint.array as Float32Array;
+    for (let i = 0; i < 24; i++) t.set([c.r, c.g, c.b], i * 3);
+    signalGeo.attributes.tint.needsUpdate = true;
+  }, [theme, signalGeo]);
   useEffect(() => () => lineGeo.dispose(), [lineGeo]);
   useEffect(() => {
     const canvas = gl.domElement,
@@ -205,17 +214,7 @@ function Cloud({ layout }: { layout: Layout }) {
       down.delete(event.pointerId);
       if (!down.size) multi = false;
     };
-    const end = (event: PointerEvent) => {
-      const first = down.get(event.pointerId),
-        wasMulti = multi;
-      cancel(event);
-      if (
-        !first ||
-        wasMulti ||
-        event.target !== canvas ||
-        Math.hypot(event.clientX - first.x, event.clientY - first.y) > 8
-      )
-        return;
+    const nearest = (x: number, y: number, radius: number) => {
       const rect = canvas.getBoundingClientRect(),
         p = new THREE.Vector3(),
         positions = geo.attributes.position.array as Float32Array,
@@ -231,18 +230,58 @@ function Cloud({ layout }: { layout: Layout }) {
           z: p.z,
         });
       }
-      const id = nearestScreenNode(
-        event.clientX,
-        event.clientY,
-        candidates,
-        event.pointerType === "touch" ? 26 : 16,
-      );
-      useRepo.getState().select(id);
+      return nearestScreenNode(x, y, candidates, radius);
+    };
+    const end = (event: PointerEvent) => {
+      const first = down.get(event.pointerId),
+        wasMulti = multi;
+      cancel(event);
+      if (
+        !first ||
+        wasMulti ||
+        event.target !== canvas ||
+        Math.hypot(event.clientX - first.x, event.clientY - first.y) > 8
+      )
+        return;
+      useHover.getState().set(null);
+      useRepo
+        .getState()
+        .select(
+          nearest(
+            event.clientX,
+            event.clientY,
+            event.pointerType === "touch" ? 26 : 16,
+          ),
+        );
+    };
+    let frame = 0;
+    const move = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse" || down.size) {
+        if (useHover.getState().id) useHover.getState().set(null);
+        return;
+      }
+      cancelAnimationFrame(frame);
+      const { clientX: x, clientY: y } = event;
+      frame = requestAnimationFrame(() => {
+        const id = nearest(x, y, 14),
+          rect = canvas.getBoundingClientRect();
+        useHover.getState().set(id, x - rect.left, y - rect.top);
+        canvas.style.cursor = id ? "pointer" : "";
+      });
+    };
+    const leave = () => {
+      cancelAnimationFrame(frame);
+      useHover.getState().set(null);
     };
     canvas.addEventListener("pointerdown", start);
     canvas.addEventListener("pointerup", end);
     canvas.addEventListener("pointercancel", cancel);
+    canvas.addEventListener("pointermove", move);
+    canvas.addEventListener("pointerleave", leave);
     return () => {
+      cancelAnimationFrame(frame);
+      canvas.removeEventListener("pointermove", move);
+      canvas.removeEventListener("pointerleave", leave);
       canvas.removeEventListener("pointerdown", start);
       canvas.removeEventListener("pointerup", end);
       canvas.removeEventListener("pointercancel", cancel);
@@ -254,10 +293,35 @@ function Cloud({ layout }: { layout: Layout }) {
     lastPackageLabels = useRef("");
   const [labelIds, setLabelIds] = useState<string[]>([]),
     lastLabels = useRef("");
+  const ink = inks[theme];
   const colors = useMemo(
-    () => groups.map((g) => new THREE.Color(groupColor(g, groups))),
-    [groups],
+    () => groups.map((g) => new THREE.Color(groupColor(g, groups, theme))),
+    [groups, theme],
   );
+  const complexityByFile = useMemo(() => fileComplexity(snapshot), [snapshot]);
+  const hotScore = useMemo(() => {
+    const scores = new Map<string, number>();
+    let max = 0;
+    for (const n of snapshot.nodes)
+      if (n.kind === "file") {
+        const c = complexityByFile.get(n.id) ?? 0,
+          changes = history?.files.get(n.path)?.changes,
+          value = history?.coverage.compared ? (changes ?? 0) * c : c;
+        scores.set(n.id, value);
+        max = Math.max(max, value);
+      }
+    for (const [k, v] of scores) scores.set(k, max ? v / max : 0);
+    return scores;
+  }, [snapshot, complexityByFile, history]);
+  const rankedAuthors = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const f of history?.files.values() ?? [])
+      if (f.lastAuthor)
+        counts.set(f.lastAuthor, (counts.get(f.lastAuthor) ?? 0) + 1);
+    return [...counts].sort((a, b) => b[1] - a[1]).map(([a]) => a);
+  }, [history]);
+  const ground = useMemo(() => new THREE.Color(ink.ground), [ink]);
+  const uniforms = useMemo(() => ({ uGround: { value: ground } }), [ground]);
   const changed = useRepo((s) => s.diff),
     changedPaths = useMemo(
       () => new Set([...(changed?.added ?? []), ...(changed?.changed ?? [])]),
@@ -280,6 +344,10 @@ function Cloud({ layout }: { layout: Layout }) {
     reducedMotion,
     labelIds,
     packageLabels,
+    theme,
+    lens,
+    hotScore,
+    rankedAuthors,
   ]);
   useFrame((_, dt) => {
     const target = useRepo.getState().layout === "layers" ? 1 : 0,
@@ -414,6 +482,7 @@ function Cloud({ layout }: { layout: Layout }) {
       tints = geo.attributes.tint.array as Float32Array,
       sizes = geo.attributes.size.array as Float32Array,
       alphas = geo.attributes.alpha.array as Float32Array,
+      marks = geo.attributes.mark.array as Float32Array,
       morph = transition.current;
     const position = (id: string, group: string): Vec3 => {
       const p = layout[id];
@@ -426,6 +495,7 @@ function Cloud({ layout }: { layout: Layout }) {
           })
         : [0, 0, 0];
     };
+    const tmp = new THREE.Color();
     for (let i = 0; i < nodes.length; i++) {
       const n = nodes[i],
         p = position(n.id, n.group);
@@ -440,30 +510,59 @@ function Cloud({ layout }: { layout: Layout }) {
             ? 1
             : Math.min(1, age)
           : 1;
+      const pick = (hex: string) => tmp.set(hex);
       let c =
         colors[Math.max(0, groups.indexOf(n.group)) % colors.length] ??
-        new THREE.Color("#45bfff");
-      if (ghostIds.has(n.id)) c = new THREE.Color("#ff8791");
-      if (color === "complexity")
-        c = new THREE.Color((n.complexity ?? 0) > 10 ? "#ffb76b" : "#579fff");
+        pick(ink.ink);
+      let marked = 0,
+        scale = 1;
+      if (color === "complexity") {
+        const value =
+          n.kind === "function"
+            ? (n.complexity ?? 0)
+            : (complexityByFile.get(n.id) ?? 0) / 4;
+        c = pick(value > 10 ? ink.revision : value > 5 ? ink.ink : ink.muted);
+      }
       if (color === "language")
-        c = new THREE.Color(
+        c = pick(
           n.language === "TypeScript"
-            ? "#4fa9ff"
+            ? ink.language.TypeScript
             : n.language === "JavaScript"
-              ? "#f4d16b"
-              : "#8ce3cd",
+              ? ink.language.JavaScript
+              : ink.language.other,
         );
-      if (color === "changes")
-        c = new THREE.Color(changedPaths.has(n.path) ? "#6ff5cf" : "#54779c");
+      if (color === "changes") {
+        const added = changed?.added.includes(n.path),
+          edited = changedPaths.has(n.path);
+        c = pick(added ? ink.added : edited ? ink.revision : ink.muted);
+        if (edited && !added && n.kind === "file") marked = 1;
+      }
+      if (color === "hotspots") {
+        const h =
+          hotScore.get(n.kind === "function" ? (n.parent ?? "") : n.id) ?? 0;
+        c = pick(h > 0.6 ? ink.revision : h > 0.32 ? ink.ink : ink.muted);
+        if (n.kind === "file") scale = 0.75 + h * 1.6;
+      }
+      if (color === "authors")
+        c = pick(
+          authorColor(
+            history?.files.get(n.path)?.lastAuthor,
+            rankedAuthors,
+            theme,
+          ),
+        );
+      if (ghostIds.has(n.id)) c = pick(ink.revision);
       const active = n.id === selectedId || n.parent === selectedId,
-        dim = focus && focus !== n.group?.toString() ? 0.24 : 1;
-      tints.set(
-        active ? [0.45, 1, 0.83] : [c.r * dim, c.g * dim, c.b * dim],
-        i * 3,
-      );
+        dim = focus && focus !== n.group?.toString() ? 0.76 : 0;
+      const tint = active
+        ? new THREE.Color(ink.select)
+        : dim
+          ? c.clone().lerp(ground, dim)
+          : c;
+      tints.set([tint.r, tint.g, tint.b], i * 3);
+      marks[i] = active ? 0 : marked;
       sizes[i] =
-        n.kind === "package"
+        (n.kind === "package"
           ? 7
           : active
             ? 1.8 + Math.sin(clock.current * 3) * 0.12
@@ -473,7 +572,7 @@ function Cloud({ layout }: { layout: Layout }) {
                 Math.min(
                   1.1,
                   Math.sqrt(n[metric]) / (metric === "loc" ? 22 : 145),
-                );
+                )) * scale;
     }
     if (!reducedMotion && performance.now() - ghostStart.current < 1700) {
       const age = (performance.now() - ghostStart.current) / 1700;
@@ -481,45 +580,12 @@ function Cloud({ layout }: { layout: Layout }) {
         if (changedPaths.has(nodes[i].path))
           sizes[i] *= 1 + Math.sin(age * Math.PI) * 0.5;
     }
-    // Atmospheric specks are a non-interactive material, not additional repository entities.
-    for (let d = 0; d < dustCount; d++) {
-      const base = dustNodes[d % Math.max(1, dustNodes.length)],
-        i = nodes.length + d;
-      if (!base) {
-        pos.set([0, 0, 0], i * 3);
-        sizes[i] = 0;
-        continue;
-      }
-      const p = position(base.id, base.group),
-        r = hash("dust" + d) / 4294967295,
-        a = d * 2.39996,
-        w = (1 - morph) * (0.2 + r * 0.6);
-      pos.set(
-        [
-          p[0] + Math.sin(a) * w,
-          p[1] + Math.cos(a * 1.3) * w,
-          p[2] + Math.sin(a * 0.7) * w,
-        ],
-        i * 3,
-      );
-      const c =
-        colors[Math.max(0, groups.indexOf(base.group)) % colors.length] ??
-        new THREE.Color("#45bfff");
-      const haze = d % 60 === 0;
-      alphas[i] = haze ? 0.18 : 0.65;
-      tints.set(
-        haze
-          ? [c.r * 0.08, c.g * 0.08, c.b * 0.08]
-          : [c.r * 0.45, c.g * 0.45, c.b * 0.45],
-        i * 3,
-      );
-      sizes[i] = haze ? 9 + r * 5 : 0.18 + r * 0.2;
-    }
     geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 100);
     geo.attributes.position.needsUpdate = true;
     geo.attributes.tint.needsUpdate = true;
     geo.attributes.size.needsUpdate = true;
     geo.attributes.alpha.needsUpdate = true;
+    geo.attributes.mark.needsUpdate = true;
     const lp = lineGeo.attributes.position.array as Float32Array,
       lc = lineGeo.attributes.color.array as Float32Array;
     for (let i = 0; i < links.length; i++) {
@@ -529,20 +595,9 @@ function Cloud({ layout }: { layout: Layout }) {
         active = e.source === selectedId || e.target === selectedId;
       lp.set(pos.subarray(a * 3, a * 3 + 3), i * 6);
       lp.set(pos.subarray(b * 3, b * 3 + 3), i * 6 + 3);
-      const power = active ? 0.8 : view === "Dependencies" ? 0.19 : 0.085;
-      lc.set(
-        active
-          ? [0.3, power, power, 0.3, power, power]
-          : [
-              power * 0.25,
-              power * 0.65,
-              power,
-              power * 0.25,
-              power * 0.65,
-              power,
-            ],
-        i * 6,
-      );
+      const power = active ? 0.95 : lens === "dependencies" ? 0.42 : 0.2,
+        rgb = mixHex(ink.ground, active ? ink.select : ink.line, power);
+      lc.set([...rgb, ...rgb], i * 6);
     }
     const activeLinks = links
       .filter(
@@ -601,28 +656,22 @@ function Cloud({ layout }: { layout: Layout }) {
         <shaderMaterial
           vertexShader={vertex}
           fragmentShader={fragment}
+          uniforms={uniforms}
           transparent
           depthWrite={false}
-          blending={THREE.AdditiveBlending}
         />
       </points>
       <points geometry={signalGeo} frustumCulled={false} raycast={() => {}}>
         <shaderMaterial
           vertexShader={vertex}
           fragmentShader={fragment}
+          uniforms={uniforms}
           transparent
           depthWrite={false}
-          blending={THREE.AdditiveBlending}
         />
       </points>
       <lineSegments ref={lines} geometry={lineGeo} frustumCulled={false}>
-        <lineBasicMaterial
-          vertexColors
-          transparent
-          opacity={0.8}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
+        <lineBasicMaterial vertexColors depthWrite={false} />
       </lineSegments>
       {labelIds.map((id) => {
         const n = nodes.find((n) => n.id === id);
@@ -668,7 +717,7 @@ function Cloud({ layout }: { layout: Layout }) {
                 className={`cluster-label ${focus === g ? "focused" : ""}`}
                 style={
                   {
-                    "--cluster": palette[groups.indexOf(g) % palette.length],
+                    "--cluster": groupColor(g, groups, theme),
                   } as React.CSSProperties
                 }
                 title={`${g} · ${snapshot.nodes.filter((n) => n.kind === "file" && n.group === g).length} files`}
@@ -965,10 +1014,12 @@ export function Graph() {
           gl={{
             antialias: false,
             alpha: true,
+            preserveDrawingBuffer: true,
             powerPreference: "high-performance",
           }}
           frameloop={view === "Explore" ? "always" : "never"}
           onCreated={({ raycaster, gl, scene, camera, get }) => {
+            graphCanvas.current = gl.domElement;
             if (import.meta.env.DEV)
               (
                 window as unknown as { __repoViewGraph: unknown }
@@ -994,16 +1045,6 @@ export function Graph() {
         >
           <Cloud layout={layout} />
           <Camera layout={layout} />
-          {!lowPower && (
-            <EffectComposer multisampling={0}>
-              <Bloom
-                intensity={1.05}
-                luminanceThreshold={0.75}
-                luminanceSmoothing={0.6}
-                mipmapBlur
-              />
-            </EffectComposer>
-          )}
         </Canvas>
       </Suspense>
     </GraphBoundary>
