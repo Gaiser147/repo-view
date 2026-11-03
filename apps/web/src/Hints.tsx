@@ -61,7 +61,13 @@ export function Hints() {
         innerWidth - width - 16,
         current.target === "graph"
           ? box.left + box.width / 2 - width / 2
-          : box.left + 12,
+          : current.target === "lenses"
+            ? Math.max(
+                box.left + 12,
+                (document.querySelector(".lens-card")?.getBoundingClientRect()
+                  .right ?? 0) + 12,
+              )
+            : box.left + 12,
       ),
     ),
     top =
@@ -83,15 +89,15 @@ export function Hints() {
       }}
       onKeyDown={(e) => e.key === "Escape" && finish()}
     >
-      <span className="hint-step">
-        Tip {step + 1} of {steps.length}
-      </span>
       <b>{current.title}</b>
       <p>{current.text}</p>
       <div>
         <button className="text-link" onClick={finish}>
           Skip tips
         </button>
+        <span className="hint-step">
+          {step + 1} / {steps.length}
+        </span>
         <button
           className="primary-button small"
           autoFocus

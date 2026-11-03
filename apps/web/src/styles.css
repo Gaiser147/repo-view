@@ -25,7 +25,7 @@
   --added: #8ff0c8;
   --field: #0b2747;
   --focus: #ffd45c;
-  --shadow: 0 10px 28px rgba(3, 14, 30, 0.42);
+  --shadow: none;
   --scrim: rgba(7, 26, 48, 0.72);
   color-scheme: dark;
 }
@@ -49,7 +49,7 @@
   --added: #0d7a58;
   --field: #ffffff;
   --focus: #12305a;
-  --shadow: 0 10px 26px rgba(18, 48, 90, 0.13);
+  --shadow: none;
   --scrim: rgba(237, 241, 245, 0.8);
   color-scheme: light;
 }
@@ -302,20 +302,17 @@ kbd {
   font-size: 11px;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  border: 1px solid var(--act);
-  color: var(--act);
+  /* Status labels are drawn in ink: chrome yellow is reserved for things that can be pressed. */
+  border: 1px dashed var(--ink-2);
+  color: var(--ink);
   border-radius: 2px;
   padding: 2px 6px;
   white-space: nowrap;
   line-height: 1.2;
 }
-:root[data-theme="whiteprint"] .demo-tag,
-:root[data-theme="whiteprint"] .tag {
-  color: #7a5500;
-  border-color: #b98a00;
-}
 .tag {
   color: var(--ink-2);
+  border-style: solid;
   border-color: var(--rule-strong);
 }
 .panel-heading,
@@ -1183,7 +1180,7 @@ kbd {
 }
 .group-bars > div {
   display: grid;
-  grid-template-columns: 84px 1fr 28px;
+  grid-template-columns: 84px 1fr 52px;
   gap: 8px;
   align-items: center;
   font-size: 13px;
@@ -1395,7 +1392,8 @@ kbd {
 .tree-file.selected {
   background: var(--act-soft);
   color: var(--ink);
-  box-shadow: inset 2px 0 var(--act);
+  outline: 1px solid var(--act);
+  outline-offset: -1px;
 }
 
 /* Inspector */
@@ -1651,14 +1649,14 @@ kbd {
   display: grid;
   place-items: start center;
   overflow: auto;
-  padding: clamp(16px, 6vh, 64px) 16px 32px;
+  padding: clamp(12px, 3vh, 32px) 16px 24px;
   background: var(--scrim);
   backdrop-filter: blur(2px);
 }
 .start-sheet {
   position: relative;
   width: min(820px, 100%);
-  padding: clamp(20px, 4vw, 40px);
+  padding: clamp(20px, 3vw, 32px);
   background: var(--sheet);
   border: 1px solid var(--rule-strong);
   border-radius: var(--radius);
@@ -1779,7 +1777,8 @@ kbd {
 /* Hints */
 .hint {
   position: fixed;
-  z-index: 90;
+  /* Above the drawing and lens bar, below top-bar menus so a tip never blocks a menu choice. */
+  z-index: 25;
   display: grid;
   gap: 6px;
   padding: 12px 14px;
@@ -2318,7 +2317,8 @@ kbd {
 }
 .function-entry.active {
   background: var(--act-soft);
-  box-shadow: inset 2px 0 var(--act);
+  outline: 1px solid var(--act);
+  outline-offset: -1px;
 }
 .function-detail,
 .pipeline-job-details {
@@ -2691,5 +2691,82 @@ kbd {
   *::after {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+/* Review round: Δ revision tags, mobile lens strip, health label, revision on phones */
+.node-label .delta {
+  color: var(--rev);
+  font-weight: 600;
+}
+.node-label small {
+  color: var(--rev);
+  font-size: 10px;
+}
+.health-button .health-word {
+  font-family: var(--label);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.legend-list .delta {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--rev);
+  border: 1px solid var(--rev);
+  border-radius: 2px;
+  padding: 0 4px;
+}
+.spine-rev {
+  display: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.spine-rev code {
+  color: var(--ink);
+  margin-right: 6px;
+}
+@media (max-width: 880px) {
+  .health-button .health-word {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .lenses {
+    flex: 1;
+    -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
+    mask-image: linear-gradient(90deg, #000 85%, transparent);
+  }
+  .lens-tools {
+    border-left: 1px solid var(--rule);
+  }
+  .spine-title {
+    display: none;
+  }
+  .spine-rev {
+    display: block;
+    flex: 1;
+    margin-left: 6px;
+  }
+  .start-screen {
+    padding-top: 12px;
+  }
+}
+@media (min-width: 761px) {
+  .start-columns > div:first-child {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 12px;
+  }
+  .start-columns > div:first-child h2 {
+    grid-column: 1 / -1;
+  }
+  .start-sheet {
+    gap: 14px;
   }
 }

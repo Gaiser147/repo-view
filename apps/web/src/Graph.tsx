@@ -28,7 +28,8 @@ import { inks, mixHex, authorColor, groupColor } from "./colors";
 import { fileComplexity } from "../../../packages/core/src/insights";
 // Drafting marks: a stroked circle with a centre dot on a paper-filled disc. mark=1 draws a scalloped revision cloud.
 const vertex = `attribute float size; attribute float alpha; attribute float mark; attribute vec3 tint; varying vec3 vTint; varying float vAlpha; varying float vMark; varying float vPx; void main(){ vTint=tint; vAlpha=alpha; vMark=mark; vec4 mv=modelViewMatrix*vec4(position,1.); float px=clamp(size*260./-mv.z,3.,56.)*(mark>.5?1.7:1.); vPx=px; gl_PointSize=px; gl_Position=projectionMatrix*mv; }`;
-const fragment = `uniform vec3 uGround; varying vec3 vTint; varying float vAlpha; varying float vMark; varying float vPx; void main(){ vec2 q=gl_PointCoord-vec2(.5); float d=length(q)*2.; if(d>1.)discard; float aa=2.2/max(vPx,3.); float r=vMark>.5?.58:1.; float ring=smoothstep(r*.74-aa,r*.74,d)*(1.-smoothstep(r*.88,r*.88+aa,d)); float dotc=1.-smoothstep(r*.26,r*.26+aa,d); float paper=1.-smoothstep(r*.7,r*.7+aa,d); float cloud=0.; if(vMark>.5){ float a=atan(q.y,q.x); float s=.86+.07*abs(sin(a*5.)); cloud=smoothstep(s-.09-aa,s-.09,d)*(1.-smoothstep(s,s+aa,d)); } float ink=max(max(ring,dotc),cloud); float alpha=max(ink,paper*.92)*vAlpha; if(alpha<.01)discard; gl_FragColor=vec4(mix(uGround,vTint,ink),alpha); }`;
+// mark: 0 plain, 1 revision cloud (eight inward-cusped arcs around a smaller mark), 2 removed file (dashed outline, no paper).
+const fragment = `uniform vec3 uGround; varying vec3 vTint; varying float vAlpha; varying float vMark; varying float vPx; void main(){ vec2 q=gl_PointCoord-vec2(.5); float d=length(q)*2.; if(d>1.)discard; float aa=2.2/max(vPx,3.); float a=atan(q.y,q.x); float r=vMark>.5&&vMark<1.5?.5:1.; float ring=smoothstep(r*.74-aa,r*.74,d)*(1.-smoothstep(r*.88,r*.88+aa,d)); float dotc=1.-smoothstep(r*.26,r*.26+aa,d); float paper=1.-smoothstep(r*.7,r*.7+aa,d); float cloud=0.; if(vMark>.5&&vMark<1.5){ float s=.8+.14*abs(sin(a*4.)); cloud=smoothstep(s-.08-aa,s-.08,d)*(1.-smoothstep(s,s+aa,d)); } if(vMark>1.5){ ring*=step(.5,fract(a*1.9099)); dotc=0.; paper=0.; } float ink=max(max(ring,dotc),cloud); float alpha=max(ink,paper*.92)*vAlpha; if(alpha<.01)discard; gl_FragColor=vec4(mix(uGround,vTint,ink),alpha); }`;
 class GraphBoundary extends Component<
   { children: ReactNode },
   { error: boolean }
@@ -327,6 +328,41 @@ function Cloud({ layout }: { layout: Layout }) {
       () => new Set([...(changed?.added ?? []), ...(changed?.changed ?? [])]),
       [changed],
     );
+  // When most of the codebase changed, clouds go only to the most-revised fifth so the mark still picks something out.
+  const files = useMemo(
+      () => snapshot.nodes.filter((n) => n.kind === "file").length,
+      [snapshot],
+    ),
+    wideChange = !!changed && changed.changed.length > files * 0.4,
+    revisionMarked = useMemo(() => {
+      if (!wideChange || !changed) return new Set<string>();
+      return new Set(
+        snapshot.nodes
+          .filter((n) => n.kind === "file" && changed.changed.includes(n.path))
+          .sort(
+            (a, b) =>
+              (history?.files.get(b.path)?.changes ?? 0) -
+                (history?.files.get(a.path)?.changes ?? 0) || b.loc - a.loc,
+          )
+          .slice(0, Math.ceil(changed.changed.length * 0.2))
+          .map((n) => n.id),
+      );
+    }, [wideChange, changed, snapshot, history]);
+  // Evolution names its three largest changed files with a Δ tag, as a drawing calls out its revisions.
+  const revisionTop = useMemo(() => {
+    if (color !== "changes" || !changed) return new Set<string>();
+    return new Set(
+      snapshot.nodes
+        .filter((n) => n.kind === "file" && changed.changed.includes(n.path))
+        .sort(
+          (a, b) =>
+            (history?.files.get(b.path)?.changes ?? 0) -
+              (history?.files.get(a.path)?.changes ?? 0) || b.loc - a.loc,
+        )
+        .slice(0, 3)
+        .map((n) => n.id),
+    );
+  }, [color, changed, snapshot, history]);
   useEffect(() => {
     dirty.current = true;
   }, [
@@ -413,16 +449,27 @@ function Cloud({ layout }: { layout: Layout }) {
             id: n.id,
             x: ((p.x + 1) * size.width) / 2,
             y: ((1 - p.y) * size.height) / 2,
-            width: Math.min(136, 16 + n.name.length * 6),
+            width: revisionTop.has(n.id)
+              ? Math.min(200, 70 + n.name.length * 7)
+              : Math.min(136, 16 + n.name.length * 6),
             height: 22,
-            score: n.id === selectedId ? -3 : p.x * p.x + p.y * p.y,
+            score:
+              n.id === selectedId
+                ? -3
+                : revisionTop.has(n.id)
+                  ? -1
+                  : p.x * p.x + p.y * p.y,
             visible:
               n.kind !== "package" &&
-              (next === "functions" || n.id === selectedId) &&
+              (next === "functions" ||
+                n.id === selectedId ||
+                revisionTop.has(n.id)) &&
               p.z >= -1 &&
               p.z <= 1 &&
               Math.abs(p.x) < 0.85 &&
-              Math.abs(p.y) < (coarse ? 0.62 : 0.72),
+              Math.abs(p.y) < (coarse ? 0.62 : 0.72) &&
+              // Keep detail labels clear of the camera tool column.
+              ((p.x + 1) * size.width) / 2 < size.width - 90,
           };
         });
         const accepted: {
@@ -435,7 +482,7 @@ function Cloud({ layout }: { layout: Layout }) {
         for (const candidate of [...headingCandidates, ...detailCandidates]
           .filter((n) => n.visible)
           .sort((a, b) => a.score - b.score)) {
-          if (accepted.length >= (coarse ? 5 : 7)) break;
+          if (accepted.length >= (size.width < 600 ? 3 : coarse ? 5 : 7)) break;
           if (
             accepted.every(
               (a) =>
@@ -502,9 +549,11 @@ function Cloud({ layout }: { layout: Layout }) {
       pos.set(p, i * 3);
       const age = (performance.now() - ghostStart.current) / 1500;
       alphas[i] = ghostIds.has(n.id)
-        ? reducedMotion
-          ? 0
-          : Math.max(0, 1 - age)
+        ? color === "changes"
+          ? 0.9
+          : reducedMotion
+            ? 0
+            : Math.max(0, 1 - age)
         : changed?.added.includes(n.path)
           ? reducedMotion
             ? 1
@@ -535,7 +584,13 @@ function Cloud({ layout }: { layout: Layout }) {
         const added = changed?.added.includes(n.path),
           edited = changedPaths.has(n.path);
         c = pick(added ? ink.added : edited ? ink.revision : ink.muted);
-        if (edited && !added && n.kind === "file") marked = 1;
+        if (
+          edited &&
+          !added &&
+          n.kind === "file" &&
+          (!wideChange || revisionMarked.has(n.id))
+        )
+          marked = 1;
       }
       if (color === "hotspots") {
         const h =
@@ -560,7 +615,7 @@ function Cloud({ layout }: { layout: Layout }) {
           ? c.clone().lerp(ground, dim)
           : c;
       tints.set([tint.r, tint.g, tint.b], i * 3);
-      marks[i] = active ? 0 : marked;
+      marks[i] = active ? 0 : ghostIds.has(n.id) ? 2 : marked;
       sizes[i] =
         (n.kind === "package"
           ? 7
@@ -691,7 +746,11 @@ function Cloud({ layout }: { layout: Layout }) {
                 title={n.path}
               >
                 {n.kind === "function" ? "ƒ " : ""}
+                {revisionTop.has(n.id) && <span className="delta">Δ</span>}
                 {n.name}
+                {revisionTop.has(n.id) && history?.files.get(n.path) && (
+                  <small>rev {history.files.get(n.path)!.changes}</small>
+                )}
               </button>
             </Html>
           </group>
@@ -812,7 +871,10 @@ function Camera({ layout }: { layout: Layout }) {
       tan = Math.tan(
         THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov / 2),
       ),
-      aspect = size.width / Math.max(1, size.height),
+      // Frame the drawing in the area the floating lens card and Inspector leave free.
+      { left: insetLeft, right: insetRight } = insets(),
+      free = Math.max(size.width * 0.4, size.width - insetLeft - insetRight),
+      aspect = free / Math.max(1, size.height),
       distance =
         Math.max(extent.y / (2 * tan), extent.x / (2 * tan * aspect)) * 1.18 +
         extent.z / 2 +
@@ -821,11 +883,38 @@ function Camera({ layout }: { layout: Layout }) {
       (box.getBoundingSphere(new THREE.Sphere()).radius /
         Math.sin(Math.atan(Math.min(tan, tan * aspect)))) *
       1.2;
-    move(
-      center,
-      Math.max(15, mode === "layers" ? layerDistance : distance),
-      true,
-    );
+    const finalDistance = Math.max(
+        15,
+        mode === "layers" ? layerDistance : distance,
+      ),
+      visibleWidth =
+        2 * tan * finalDistance * (size.width / Math.max(1, size.height)),
+      shift = ((insetLeft - insetRight) / 2 / size.width) * visibleWidth,
+      right = new THREE.Vector3(1, 0, 0);
+    move(center.clone().sub(right.multiplyScalar(shift)), finalDistance, true);
+  }
+  /** Widths covered by the floating lens card and Inspector, which open over the drawing on wide screens. */
+  function insets() {
+    if (size.width <= 760) return { left: 0, right: 0 };
+    const card = document.querySelector(".lens-card:not(.collapsed)");
+    return {
+      left: card ? card.getBoundingClientRect().width + 14 : 0,
+      right: useRepo.getState().inspectorOpen ? 354 : 0,
+    };
+  }
+  /** Moves to a node while keeping it centred in the free area between the floating panels. */
+  function frame(target: THREE.Vector3, distance: number) {
+    const { left, right } = insets(),
+      tan = Math.tan(
+        THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov / 2),
+      ),
+      visibleWidth =
+        2 * tan * distance * (size.width / Math.max(1, size.height)),
+      shift = ((left - right) / 2 / size.width) * visibleWidth,
+      sideways = new THREE.Vector3()
+        .setFromMatrixColumn(camera.matrixWorld, 0)
+        .multiplyScalar(-shift);
+    move(target.clone().add(sideways), distance);
   }
   const previousMode = useRef(mode);
   useEffect(() => {
@@ -859,18 +948,11 @@ function Camera({ layout }: { layout: Layout }) {
           rules: layerRules,
         }),
       );
-    if (n?.kind === "package" && mode === "layers") {
+    if (n?.kind === "package") {
       fit(n.group);
       return;
     }
-    move(
-      target,
-      n?.kind === "function"
-        ? 5.5
-        : n?.kind === "file"
-          ? 8
-          : Math.max(13, camera.position.distanceTo(controls.current.target)),
-    );
+    frame(target, n?.kind === "function" ? 5.5 : 8);
   }, [selectedId, focus, mode, layout, layerRules]);
   useEffect(() => {
     if (!cameraCommand.revision || !controls.current) return;

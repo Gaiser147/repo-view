@@ -13,6 +13,8 @@ Job: locate structure, risk and change quickly; follow relationships; compare co
 Constraints: PRODUCT.md evidence rules (demo labelled, missing data explicit), GitHub quota, Files/Inspector fallback without WebGL, reduced motion, low power.
 Chosen structure: Lenses (A) combined with the time spine (C), user decision 2026-11-03. Features chosen: Hotspots lens, Authors colour mode, PNG export, light theme, commit compare A→B, start screen, ⌘K palette, shareable URL state, hover preview, contextual hints, removal of duplicated controls.
 
+Build path: code-led (Operate surface), so there is no comp round. On 2026-11-03 the user chose from HTML decision sketches: the structure "A + C kombiniert" (lenses plus time spine), the features "Hotspots, Autoren als Farbmodus, PNG-Export & helles Theme" plus "Commit-Vergleich: Ja, mit rein", and the world "Blaupause".
+
 ## Direction contract
 
 THESIS: A repository is a set of plans and every commit is a revision. The surface refuses the category default of a near-black instrument panel with neon glow and many stacked toolbars; it is one drawing with a title block.

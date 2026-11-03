@@ -705,14 +705,12 @@ export async function compareCommits(from: string, to: string) {
   }
 }
 export function clearCompare() {
-  useRepo
-    .getState()
-    .set({
-      compareBase: null,
-      diff: null,
-      diffBase: null,
-      previousSnapshot: null,
-    });
+  useRepo.getState().set({
+    compareBase: null,
+    diff: null,
+    diffBase: null,
+    previousSnapshot: null,
+  });
 }
 
 /**

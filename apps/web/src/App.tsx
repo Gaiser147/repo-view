@@ -306,6 +306,7 @@ export function App() {
             }
           >
             <ShieldCheck size={15} strokeWidth={1.6} />
+            <span className="health-word">Health</span>
             <b>{health.score ?? "—"}</b>
             <small>/100</small>
           </button>

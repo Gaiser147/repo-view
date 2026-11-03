@@ -26,6 +26,12 @@ const compact = (n: number) =>
 export function LensBar() {
   const { lens, setLens, layout, set, view, filesOpen, toggleFiles } =
     useRepo();
+  const strip = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    strip.current
+      ?.querySelector<HTMLElement>(".lens.active")
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [lens]);
   return (
     <div className="lens-bar">
       <button
@@ -37,7 +43,12 @@ export function LensBar() {
         <ListTree size={17} strokeWidth={1.6} />
         <span>Files</span>
       </button>
-      <nav className="lenses" aria-label="Lenses" data-hint="lenses">
+      <nav
+        className="lenses"
+        aria-label="Lenses"
+        data-hint="lenses"
+        ref={strip}
+      >
         {lenses.map((l, i) => (
           <button
             key={l.id}
@@ -390,7 +401,8 @@ function Dependencies() {
 }
 
 function Evolution() {
-  const { snapshot, diff, diffBase, compareBase, select, theme } = useRepo(),
+  const { snapshot, diff, diffBase, compareBase, select, theme, history } =
+      useRepo(),
     ink = inks[theme];
   const byGroup = useMemo(() => {
     const counts = new Map<string, number>();
@@ -398,7 +410,14 @@ function Evolution() {
       const g = snapshot.nodes.find((n) => n.path === path)?.group ?? "other";
       counts.set(g, (counts.get(g) ?? 0) + 1);
     }
-    return [...counts].sort((a, b) => b[1] - a[1]).slice(0, 4);
+    const size = (g: string) =>
+      snapshot.nodes.filter((n) => n.kind === "file" && n.group === g).length ||
+      1;
+    // Share of each group's files that changed, so a sweeping change still ranks groups honestly.
+    return [...counts]
+      .map(([g, n]) => [g, n, size(g)] as const)
+      .sort((a, b) => b[1] / b[2] - a[1] / a[2] || b[1] - a[1])
+      .slice(0, 4);
   }, [diff, snapshot]);
   if (!diff)
     return (
@@ -407,13 +426,12 @@ function Evolution() {
           Open a commit or drag across the time spine to compare two revisions.
         </p>
         <p className="lens-legend">
-          Changed files get a revision cloud, additions turn mint, removals fade
-          out as outlines.
+          Changed files get a revision cloud and a Δ tag, additions turn mint,
+          removed files remain as dashed outlines.
         </p>
       </>
     );
-  const top = byGroup[0]?.[1] ?? 1,
-    touched = diff.added.length + diff.changed.length;
+  const touched = diff.added.length + diff.changed.length;
   return (
     <>
       <p className="lens-lead">
@@ -449,20 +467,22 @@ function Evolution() {
       </dl>
       {byGroup.length > 0 && (
         <>
-          <h3 className="lens-sub">Most changed groups</h3>
+          <h3 className="lens-sub">Share of each group changed</h3>
           <div className="group-bars">
-            {byGroup.map(([g, n]) => (
+            {byGroup.map(([g, n, total]) => (
               <div key={g}>
                 <span>{g}</span>
                 <span className="bar">
                   <i
                     style={{
-                      width: `${(n / top) * 100}%`,
+                      width: `${(n / total) * 100}%`,
                       background: ink.ink,
                     }}
                   />
                 </span>
-                <small>{n}</small>
+                <small>
+                  {n}/{total}
+                </small>
               </div>
             ))}
           </div>
@@ -470,25 +490,35 @@ function Evolution() {
       )}
       <h3 className="lens-sub">Changed files</h3>
       <div className="legend-list">
-        {[...diff.changed, ...diff.added].slice(0, 6).map((path) => {
-          const node = snapshot.nodes.find(
-            (n) => n.path === path && n.kind === "file",
-          );
-          return (
-            node && (
-              <button key={path} onClick={() => select(node.id)} title={path}>
-                <i
-                  style={{
-                    background: diff.added.includes(path)
-                      ? ink.added
-                      : ink.revision,
-                  }}
-                />
-                <span className="path">{path}</span>
-              </button>
-            )
-          );
-        })}
+        {[...diff.changed, ...diff.added]
+          .sort(
+            (a, b) =>
+              (history?.files.get(b)?.changes ?? 0) -
+              (history?.files.get(a)?.changes ?? 0),
+          )
+          .slice(0, 6)
+          .map((path) => {
+            const node = snapshot.nodes.find(
+              (n) => n.path === path && n.kind === "file",
+            );
+            const added = diff.added.includes(path),
+              revisions = history?.files.get(path)?.changes;
+            return (
+              node && (
+                <button key={path} onClick={() => select(node.id)} title={path}>
+                  <i
+                    style={{
+                      background: added ? ink.added : ink.revision,
+                    }}
+                  />
+                  <span className="path">{path}</span>
+                  <small className={added ? undefined : "delta"}>
+                    {added ? "new" : `Δ rev ${revisions ?? 1}`}
+                  </small>
+                </button>
+              )
+            );
+          })}
       </div>
       {compareBase && (
         <button className="secondary-button" onClick={clearCompare}>

@@ -157,7 +157,7 @@ test("slow background cache prepares adjacent commits and reuses unchanged sourc
     timeout: 30000,
   });
   await expect(page.locator(".cache-indicator")).toContainText(
-    /2 cached|3 cached/,
+    /[23] commits ready offline/,
     { timeout: 20000 },
   );
   const before = trees;

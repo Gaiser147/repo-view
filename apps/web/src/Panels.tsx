@@ -179,10 +179,21 @@ export function Inspector() {
     [limit, setLimit] = useState(100);
   useEffect(() => setLimit(100), [selectedId]);
   const children = snapshot.nodes.filter((n) => n.parent === node?.id),
-    relations = snapshot.edges.filter(
-      (e) =>
-        (e.source === selectedId || e.target === selectedId) &&
-        e.kind !== "contains",
+    groupFiles =
+      node?.kind === "package"
+        ? new Set(
+            snapshot.nodes
+              .filter((n) => n.group === node.group && n.kind !== "package")
+              .map((n) => n.id),
+          )
+        : null,
+    // A group's relationships are the links that cross its boundary, not edges to the group node itself.
+    relations = snapshot.edges.filter((e) =>
+      groupFiles
+        ? e.kind !== "contains" &&
+          groupFiles.has(e.source) !== groupFiles.has(e.target)
+        : (e.source === selectedId || e.target === selectedId) &&
+          e.kind !== "contains",
     );
   const history = useRepo((s) => s.history),
     fileHistory = node ? history?.files.get(node.path) : undefined;
@@ -218,14 +229,30 @@ export function Inspector() {
               )}
               <h2>{node.name}</h2>
             </div>
-            <p className="file-path">
-              {node.path}
-              {node.line ? `:${node.line}` : ""}
-            </p>
-            <div className="file-kind">
-              {node.language}
-              <span>{node.kind}</span>
-            </div>
+            {node.kind === "package" ? (
+              <div className="file-kind">
+                Group
+                <span>
+                  {groupFiles
+                    ? snapshot.nodes.filter(
+                        (n) => n.group === node.group && n.kind === "file",
+                      ).length
+                    : 0}{" "}
+                  files
+                </span>
+              </div>
+            ) : (
+              <>
+                <p className="file-path">
+                  {node.path}
+                  {node.line ? `:${node.line}` : ""}
+                </p>
+                <div className="file-kind">
+                  {node.language}
+                  <span>{node.kind}</span>
+                </div>
+              </>
+            )}
             <div className="inspector-tabs">
               {["Overview", "Relations"].map((t) => (
                 <button
@@ -259,7 +286,11 @@ export function Inspector() {
                     </div>
                   )}
                   <div>
-                    <dt>Relationships</dt>
+                    <dt>
+                      {node.kind === "package"
+                        ? "Links across group"
+                        : "Relationships"}
+                    </dt>
                     <dd>{relations.length}</dd>
                   </div>
                   {node.kind === "file" && history && (
@@ -318,10 +349,12 @@ export function Inspector() {
                   Connected elements <span>{relations.length}</span>
                 </div>
                 {relations.slice(0, limit).map((e) => {
-                  const target = snapshot.nodes.find(
-                    (n) =>
-                      n.id === (e.source === selectedId ? e.target : e.source),
-                  );
+                  const outgoing = groupFiles
+                      ? groupFiles.has(e.source)
+                      : e.source === selectedId,
+                    target = snapshot.nodes.find(
+                      (n) => n.id === (outgoing ? e.target : e.source),
+                    );
                   return (
                     target && (
                       <button
@@ -333,8 +366,7 @@ export function Inspector() {
                         <span>
                           {target.name}
                           <small>
-                            {e.source === selectedId ? "outgoing" : "incoming"}{" "}
-                            {e.kind}
+                            {outgoing ? "outgoing" : "incoming"} {e.kind}
                           </small>
                         </span>
                       </button>

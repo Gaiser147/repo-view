@@ -175,7 +175,7 @@ export function Timeline() {
         </span>
       </div>
       <div>
-        <span className="tb-label">Sheet</span>
+        <span className="tb-label">No.</span>
         <span className="tb-mono">
           {index >= 0 ? index + 1 : "—"} / {chronological.length} · {branch}
         </span>
@@ -237,19 +237,23 @@ export function Timeline() {
             <ChevronRight size={16} />
           </button>
           <b className="spine-title">History</b>
+          <span className="spine-rev">
+            <code>{snapshot.sha.slice(0, 7)}</code>
+            {commit?.message}
+          </span>
           <span className="spine-meta">
             {chronological.length} commits
             {snapshot.demo && <span className="demo-tag">Demo</span>}
           </span>
           <span
             className={`cache-indicator ${cacheStatus}`}
-            title="Opened and prepared commits load instantly."
+            title="Commits already opened or prepared in the background open instantly and feed Hotspots and Authors."
           >
             {cacheStatus === "warming"
               ? "Preparing nearby commit…"
               : cacheStatus === "paused"
-                ? `Cache paused · ${cachedCommits} cached`
-                : `${cachedCommits} cached`}
+                ? `Cache paused · ${cachedCommits} ready`
+                : `${cachedCommits} ${cachedCommits === 1 ? "commit" : "commits"} ready offline`}
           </span>
           <ApiAllowance />
           <span className="spine-hint">
